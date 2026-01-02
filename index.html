@@ -80,7 +80,7 @@
   </div>
 
 <script>
-  // ✅ 已代入你的 LIFF ID
+  // ✅ 你的 LIFF ID（照你提供）
   const LIFF_ID = "2008715504-WYC2RKbW";
 
   const el = (id)=>document.getElementById(id);
@@ -125,7 +125,6 @@
     try{
       await liff.init({ liffId: LIFF_ID });
 
-      // 顯示是否在 LINE 內
       try {
         clientText.textContent = (liff.isInClient && liff.isInClient()) ? 'LINE內（可關閉）' : '非LINE內（不可自動關閉）';
       } catch(e) {
@@ -135,7 +134,6 @@
       if(!liff.isLoggedIn()){
         pillLogin.textContent = '未登入';
 
-        // 非LINE內，不強制跳登入
         if(!liff.isInClient || !liff.isInClient()){
           setStatus('warn', '請用手機 LINE 內開啟此頁面才能打卡（此頁為 LIFF）。');
           helloEl.textContent = '請用 LINE 打開此頁。';
@@ -220,7 +218,17 @@
       if(data.ok){
         setStatus('ok', `✅ 打卡成功｜距離 ${data.distance_m}m`);
 
-        // ✅ 立刻關閉（同步呼叫）
+        // ✅ B方案：由 LIFF 直接把 Flex 發到聊天室（不靠 Push token）
+        try {
+          if (data.flex && window.liff && typeof liff.sendMessages === 'function') {
+            await liff.sendMessages([data.flex]);
+          }
+        } catch (e) {
+          // 發送失敗也不影響打卡本體；需要的話可顯示提示
+          // setStatus('warn', '已打卡成功，但通知訊息發送失敗');
+        }
+
+        // ✅ 發完再關閉（同步關閉）
         try {
           if (window.liff && typeof liff.closeWindow === 'function') {
             liff.closeWindow();
@@ -228,12 +236,12 @@
           }
         } catch(e) {}
 
-        // 保底：如果不能自動關，就顯示手動關閉
         showCloseBtn();
-      }else{
-        setStatus('bad', data.message || '打卡失敗');
-        showCloseBtn();
+        return;
       }
+
+      setStatus('bad', data.message || '打卡失敗');
+      showCloseBtn();
     }catch(err){
       setStatus('bad', '送出失敗：' + (err && err.message ? err.message : err));
       showCloseBtn();
