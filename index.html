@@ -80,8 +80,8 @@
   </div>
 
 <script>
-  // ✅ 你的 LIFF ID（照你提供）
-  const LIFF_ID = "2008810311-jmqyUaTN";
+  // ✅ 你原本可正常 init 的 LIFF ID（請維持這個）
+  const LIFF_ID = "2008715504-WYC2RKbW";
 
   const el = (id)=>document.getElementById(id);
   const pillLogin = el('pillLogin');
@@ -218,20 +218,8 @@
       if(data.ok){
         setStatus('ok', `✅ 打卡成功｜距離 ${data.distance_m}m`);
 
-        // ✅ B方案：由 LIFF 直接把 Flex 發到聊天室（不靠 Push token）
-        try {
-          if (data.flex && window.liff && typeof liff.sendMessages === 'function') {
-            await liff.sendMessages([data.flex]);
-          }
-        } catch (e) {
-  setStatus('warn', '已打卡成功，但訊息發送失敗：' + (e && e.message ? e.message : JSON.stringify(e)));
-  showCloseBtn();
-  return;
-}
-
-
-
-        // ✅ 發完再關閉（同步關閉）
+        // ✅ 改回最一開始：不在前端送 Flex，交給 GAS 用官方帳號推送
+        // ✅ 成功後直接關閉
         try {
           if (window.liff && typeof liff.closeWindow === 'function') {
             liff.closeWindow();
