@@ -224,8 +224,11 @@
             await liff.sendMessages([data.flex]);
           }
         } catch (e) {
-  setStatus('warn', '已打卡成功，但訊息發送失敗：' + (e && e.message ? e.message : e));
+  setStatus('warn', '已打卡成功，但訊息發送失敗：' + (e && e.message ? e.message : JSON.stringify(e)));
+  showCloseBtn();
+  return;
 }
+
 
 
         // ✅ 發完再關閉（同步關閉）
