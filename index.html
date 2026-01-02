@@ -224,9 +224,9 @@
             await liff.sendMessages([data.flex]);
           }
         } catch (e) {
-          // 發送失敗也不影響打卡本體；需要的話可顯示提示
-          // setStatus('warn', '已打卡成功，但通知訊息發送失敗');
-        }
+  setStatus('warn', '已打卡成功，但訊息發送失敗：' + (e && e.message ? e.message : e));
+}
+
 
         // ✅ 發完再關閉（同步關閉）
         try {
