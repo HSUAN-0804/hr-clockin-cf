@@ -1,299 +1,255 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>H.R燈藝｜員工打卡</title>
-
-  <!-- LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-
   <style>
     :root{
-      --bg:#0b0c10;
-      --card:#111318;
-      --text:#e8e8e8;
-      --muted:#a0a0a0;
-      --line:#23262f;
-      --ok:#33d17a;
-      --warn:#f6c177;
-      --bad:#ff5c7a;
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
-      --radius: 18px;
+      --bg:#0b0c10;--text:#f5f5f7;--muted:#b7bbc3;--border:rgba(255,255,255,.08);
+      --radius:18px;--gold:rgba(255,215,0,.75);
     }
     *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, "Noto Sans TC", "Segoe UI", Arial;
-      background: radial-gradient(1200px 500px at 30% -10%, rgba(255,215,0,.10), transparent 60%),
-                  radial-gradient(900px 450px at 90% 10%, rgba(255,255,255,.06), transparent 55%),
-                  var(--bg);
-      color:var(--text);
-    }
-    .wrap{ max-width:520px; margin:0 auto; padding:18px; }
-    .card{
-      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-      border:1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding:16px;
-      margin:14px 0;
-    }
-    .title{ font-size:20px; font-weight:800; letter-spacing:.5px; }
-    .sub{ color:var(--muted); margin-top:6px; line-height:1.5; }
-    .tabs{display:flex; gap:10px; margin-top:12px;}
-    .tab{
-      flex:1; text-align:center; padding:10px 12px;
-      border-radius:14px; border:1px solid var(--line);
-      background: rgba(255,255,255,.03);
-      color: rgba(255,255,255,.88);
-      font-weight:900;
-      cursor:pointer; user-select:none;
-    }
-    .tab.active{
-      border-color: rgba(255,215,0,.25);
-      background: rgba(255,215,0,.10);
-    }
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+      background:radial-gradient(1200px 800px at 50% -20%, rgba(255,215,0,.10), transparent 50%),
+                 radial-gradient(900px 600px at 0% 0%, rgba(59,130,246,.10), transparent 55%),
+                 var(--bg);color:var(--text)}
+    .wrap{max-width:640px;margin:0 auto;padding:18px 14px 28px}
+    .brand{font-weight:800;letter-spacing:.5px;font-size:14px;color:var(--gold)}
+    .title{margin:6px 0 12px;font-size:26px;font-weight:900}
+    .tabs{display:flex;gap:10px;margin:10px 0 12px}
+    .tab{flex:1;border:1px solid var(--border);background:rgba(255,255,255,.04);color:rgba(255,255,255,.85);
+      padding:10px 12px;border-radius:14px;font-weight:900;text-align:center;cursor:pointer;user-select:none}
+    .tab.active{border-color:rgba(255,215,0,.25);background:rgba(255,215,0,.10);color:#fff}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 16px 42px rgba(0,0,0,.35)}
+    .row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;border:1px solid var(--border);
+      background:rgba(0,0,0,.25);color:var(--muted);font-size:13px}
+    .clock{font-size:44px;font-weight:900;letter-spacing:1px;margin:10px 0 8px}
+    .sub{color:var(--muted);font-size:13px;line-height:1.4}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+    button{width:100%;border:none;border-radius:16px;padding:14px 14px;font-size:18px;font-weight:900;color:var(--text);
+      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));border:1px solid var(--border);cursor:pointer}
+    button:active{transform:scale(.99)}
+    .status{margin-top:12px;padding:12px 12px;border-radius:14px;border:1px solid var(--border);
+      background:rgba(0,0,0,.22);font-size:14px;line-height:1.4;color:var(--muted)}
+    .status.ok{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95)}
+    .status.bad{border-color:rgba(239,68,68,.38);color:rgba(254,226,226,.95)}
+    .status.warn{border-color:rgba(245,158,11,.35);color:rgba(255,237,213,.95)}
+    .kv{display:grid;grid-template-columns:110px 1fr;gap:8px;margin-top:10px}
+    .kv div{font-size:13px;color:var(--muted)}
+    .kv b{color:var(--text);font-weight:800;word-break:break-all}
+    .mini{margin-top:12px;color:rgba(255,255,255,.55);font-size:12px}
+    .softbtn{margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
+      background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.25);color:rgba(255,255,255,.92);
+      cursor:pointer;display:none}
+    .closebtn{margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
+      background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.96);
+      cursor:pointer;display:none}
     .hidden{display:none}
-    .row{ display:flex; gap:12px; margin-top:14px; }
-    button{
-      flex:1;
-      padding:14px 14px;
-      border-radius:16px;
-      border:1px solid var(--line);
-      background: linear-gradient(180deg, rgba(255,215,0,.08), rgba(255,255,255,.02));
-      color:var(--text);
-      font-weight:800;
-      font-size:18px;
-      cursor:pointer;
-      transition:.15s transform, .15s opacity;
-    }
-    button:active{ transform: scale(.98); }
-    button[disabled]{ opacity:.55; cursor:not-allowed; }
-    .btn-in{ background: linear-gradient(180deg, rgba(51,209,122,.20), rgba(255,255,255,.02)); }
-    .btn-out{ background: linear-gradient(180deg, rgba(255,92,122,.18), rgba(255,255,255,.02)); }
-
-    .pill{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 12px; border-radius:999px;
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.03);
-      font-weight:700; margin-top:10px;
-    }
-    .dot{ width:8px; height:8px; border-radius:99px; background: var(--muted); }
-    .dot.in{ background: var(--ok); }
-    .dot.off{ background: var(--bad); }
-
-    .msg{ white-space:pre-line; line-height:1.55; margin-top:10px; }
-    .msg.ok{ color: var(--ok); }
-    .msg.bad{ color: var(--bad); }
-    .msg.warn{ color: var(--warn); }
-
-    .small{ color:var(--muted); font-size:13px; margin-top:10px; }
-    .hr{ height:1px; background:var(--line); margin:14px 0; }
-
-    /* schedule list */
-    .scheduleTop{display:flex; gap:10px; align-items:center; margin-top:10px;}
-    .monthBox{
-      flex:1; border:1px solid var(--line); border-radius:14px;
-      background: rgba(255,255,255,.03); padding:10px 12px;
-      display:flex; justify-content:space-between; align-items:center;
-      font-weight:900;
-    }
-    .monthBtn{flex:0 0 auto; padding:10px 12px; border-radius:14px; font-size:14px;}
-    .list{margin-top:12px; display:flex; flex-direction:column; gap:10px;}
-    .item{
-      border:1px solid var(--line); border-radius:14px; padding:12px;
-      background: rgba(0,0,0,.22);
-      display:flex; justify-content:space-between; gap:10px; align-items:flex-start;
-    }
+    /* schedule */
+    .scheduleTop{display:flex;gap:10px;align-items:center;margin:8px 0 12px}
+    .monthBox{flex:1;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.04);
+      padding:10px 12px;color:#fff;font-weight:900;display:flex;justify-content:space-between;align-items:center}
+    .monthBtn{flex:0 0 auto;padding:10px 12px;border-radius:14px;font-weight:900}
+    .list{margin-top:10px;display:flex;flex-direction:column;gap:10px}
+    .item{border:1px solid var(--border);border-radius:14px;padding:12px;background:rgba(0,0,0,.22);
+      display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
     .item .d{font-weight:900}
-    .seg{font-weight:800}
-    .note{color:rgba(255,255,255,.60); font-size:12px; margin-top:4px}
-    .badge{font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted)}
-    .badge.work{border-color:rgba(51,209,122,.35); color:rgba(220,252,231,.95)}
-    .badge.off{border-color:rgba(255,92,122,.35); color:rgba(254,226,226,.95)}
+    .badge{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
+    .badge.work{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95)}
+    .badge.off{border-color:rgba(239,68,68,.35);color:rgba(254,226,226,.95)}
+    .seg{color:#fff;font-weight:800}
+    .note{color:rgba(255,255,255,.60);font-size:12px;margin-top:4px}
   </style>
 </head>
-
 <body>
   <div class="wrap">
-    <div class="card">
-      <div class="title">H.R燈藝｜員工打卡</div>
-      <div class="sub" id="who">初始化中…</div>
+    <div class="brand">員工專用</div>
+    <div class="title">H.R燈藝｜打卡</div>
 
-      <div class="tabs">
-        <div class="tab active" id="tabClock">打卡</div>
-        <div class="tab" id="tabSchedule">本月班表</div>
-      </div>
-
-      <div id="panelClock">
-        <div class="pill" id="statePill">
-          <span class="dot" id="stateDot"></span>
-          <span id="stateText">狀態：讀取中</span>
-        </div>
-
-        <div class="hr"></div>
-
-        <div class="row">
-          <button class="btn-in" id="btnIn">IN 上班</button>
-          <button class="btn-out" id="btnOut">OUT 下班</button>
-        </div>
-
-        <div class="msg" id="msg"></div>
-        <div class="small" id="lastInfo"></div>
-      </div>
-
-      <div id="panelSchedule" class="hidden">
-        <div class="scheduleTop">
-          <div class="monthBox">
-            <span>月份</span>
-            <span id="monthLabel">----</span>
-          </div>
-          <button class="monthBtn" id="btnPrev">上月</button>
-          <button class="monthBtn" id="btnNext">下月</button>
-        </div>
-
-        <div class="msg" id="scheduleMsg"></div>
-        <div class="list" id="scheduleList"></div>
-      </div>
+    <div class="tabs">
+      <div class="tab active" id="tabClock">打卡</div>
+      <div class="tab" id="tabSchedule">本月班表</div>
     </div>
 
-    <div class="card">
-      <div class="title" style="font-size:16px;">小提醒</div>
-      <div class="sub">
-        - 不能重複 IN（必須 OUT 後才能再 IN）<br>
-        - 不能沒 IN 就 OUT<br>
-        - 60 秒內同動作連點會自動忽略
+    <div class="card" id="panelClock">
+      <div class="row">
+        <div class="pill" id="pillLogin">尚未登入</div>
+        <div class="pill" id="pillGps">定位未取得</div>
       </div>
+
+      <div class="clock" id="clock">--:--</div>
+      <div class="sub" id="hello">請稍候…</div>
+
+      <div class="kv">
+        <div>距離店面</div><div><b id="distText">--</b></div>
+        <div>我的LINE ID</div><div><b id="uidText">--</b></div>
+        <div>LIFF環境</div><div><b id="clientText">--</b></div>
+      </div>
+
+      <button class="softbtn" id="btnCopyId">一鍵複製我的LINE ID</button>
+      <button class="closebtn" id="btnClose">關閉視窗（返回LINE）</button>
+
+      <div class="grid">
+        <button id="btnIn">上班打卡</button>
+        <button id="btnOut">下班打卡</button>
+      </div>
+
+      <div class="status" id="statusBox">準備中…</div>
+      <div class="mini">打卡成功會由「員工端」送出 Flex（不扣官方帳號則數）。</div>
+    </div>
+
+    <div class="card hidden" id="panelSchedule">
+      <div class="scheduleTop">
+        <div class="monthBox">
+          <span>月份</span>
+          <span id="monthLabel">----</span>
+        </div>
+        <button class="monthBtn" id="btnPrev">上月</button>
+        <button class="monthBtn" id="btnNext">下月</button>
+      </div>
+
+      <div class="status" id="scheduleStatus">尚未載入…</div>
+      <div class="list" id="scheduleList"></div>
+      <div class="mini">班表來源：shift_overrides ＞ shift_month（PT）＞ shift_templates（FT）。</div>
     </div>
   </div>
 
 <script>
   const LIFF_ID = "2008810311-jmqyUaTN";
 
-  const el = (id) => document.getElementById(id);
-  const setMsg = (text, type) => {
-    const m = el('msg');
-    m.className = 'msg' + (type ? (' ' + type) : '');
-    m.textContent = text || '';
-  };
-  const setScheduleMsg = (text, type) => {
-    const m = el('scheduleMsg');
-    m.className = 'msg' + (type ? (' ' + type) : '');
-    m.textContent = text || '';
-  };
+  const el = (id)=>document.getElementById(id);
+  const tabClock = el('tabClock'), tabSchedule = el('tabSchedule');
+  const panelClock = el('panelClock'), panelSchedule = el('panelSchedule');
 
-  function setTab(which){
-    if(which === 'clock'){
-      el('tabClock').classList.add('active');
-      el('tabSchedule').classList.remove('active');
-      el('panelClock').classList.remove('hidden');
-      el('panelSchedule').classList.add('hidden');
-    }else{
-      el('tabSchedule').classList.add('active');
-      el('tabClock').classList.remove('active');
-      el('panelSchedule').classList.remove('hidden');
-      el('panelClock').classList.add('hidden');
-      if(profile && profile.userId) loadSchedule(currentMonth);
-    }
-  }
-  el('tabClock').addEventListener('click', ()=>setTab('clock'));
-  el('tabSchedule').addEventListener('click', ()=>setTab('schedule'));
+  const pillLogin = el('pillLogin');
+  const pillGps = el('pillGps');
+  const helloEl = el('hello');
+  const statusBox = el('statusBox');
+  const distText = el('distText');
+  const uidText = el('uidText');
+  const clientText = el('clientText');
+  const btnCopyId = el('btnCopyId');
+  const btnClose = el('btnClose');
+  const clockEl = el('clock');
 
-  // ✅ 讀取 liff.state，支援：clock / schedule / shift / /logs
-  function applyLiffState(){
-    const sp = new URLSearchParams(location.search);
-    const state = sp.get('liff.state');
-    if(!state){
-      setTab('clock');
-      return 'clock';
-    }
-
-    const s = String(state).trim();
-
-    // 路徑型 deep link（例如 /logs）
-    if(s.startsWith('/')){
-      // 只允許站內路徑，避免被塞外部網址
-      if(/^\/[a-zA-Z0-9\/_-]*$/.test(s) && location.pathname !== s){
-        location.replace(s + location.search);
-      }
-      return 'clock';
-    }
-
-    const k = s.toLowerCase();
-    if(k === 'schedule' || k === 'shift'){
-      setTab('schedule');
-      return 'schedule';
-    }
-
-    setTab('clock');
-    return 'clock';
-  }
-
-  function setState(state){
-    const dot = el('stateDot');
-    const text = el('stateText');
-    dot.className = 'dot';
-    if (state === 'IN') { dot.classList.add('in'); text.textContent = '狀態：上班中'; }
-    else { dot.classList.add('off'); text.textContent = '狀態：未上班/已下班'; }
-  }
-
-  async function getGeo(){
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) return resolve(null);
-      navigator.geolocation.getCurrentPosition(
-        pos => resolve({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy
-        }),
-        err => resolve({ error: err.message || 'GPS 取得失敗' }),
-        { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
-      );
-    });
-  }
+  const monthLabel = el('monthLabel');
+  const btnPrev = el('btnPrev');
+  const btnNext = el('btnNext');
+  const scheduleStatus = el('scheduleStatus');
+  const scheduleList = el('scheduleList');
 
   let profile = null;
-  let userId = '';
-  let lastGeo = null;
+  let lastPos = null;
 
   let currentMonth = (() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
   })();
-  el('monthLabel').textContent = currentMonth;
 
-  async function refreshStatus(){
-    // 你可以在這裡串 /api/status（若你有）
-    // 暫時只顯示「已登入 + 等待打卡」
-    setState('OFF');
-    el('lastInfo').textContent = '';
+  function setTab(which){
+    if(which==='clock'){
+      tabClock.classList.add('active'); tabSchedule.classList.remove('active');
+      panelClock.classList.remove('hidden'); panelSchedule.classList.add('hidden');
+    }else{
+      tabSchedule.classList.add('active'); tabClock.classList.remove('active');
+      panelSchedule.classList.remove('hidden'); panelClock.classList.add('hidden');
+      if(profile && profile.userId) loadSchedule(currentMonth);
+    }
+  }
+  tabClock.addEventListener('click', ()=>setTab('clock'));
+  tabSchedule.addEventListener('click', ()=>setTab('schedule'));
+
+  function setStatus(type, text){
+    statusBox.className = 'status ' + (type || '');
+    statusBox.textContent = text;
+  }
+  function setScheduleStatus(type, text){
+    scheduleStatus.className = 'status ' + (type || '');
+    scheduleStatus.textContent = text;
+  }
+  function showCloseBtn(){ btnClose.style.display = 'block'; }
+  btnClose.addEventListener('click', ()=>{ try{ liff.closeWindow(); }catch(e){} });
+
+  function tickClock(){
+    const d = new Date();
+    clockEl.textContent = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  }
+  setInterval(tickClock, 1000); tickClock();
+
+  // ✅ 支援 Flex 按鈕 deep link：liff.state=clock / schedule / /logs
+  function applyLiffState(){
+    const sp = new URLSearchParams(location.search);
+    const raw = sp.get('liff.state');
+    if(!raw) return 'clock';
+
+    const s = String(raw).trim().toLowerCase();
+    if(s === 'schedule' || s === 'shift'){
+      setTab('schedule');
+      return 'schedule';
+    }
+    if(s === '/logs' || s === 'logs'){
+      // 你之後如果做 /logs 頁面，可以改成 location.replace('/logs')
+      setStatus('warn', '出勤紀錄頁面尚未啟用，先帶你到班表。');
+      setTab('schedule');
+      return 'schedule';
+    }
+    setTab('clock');
+    return 'clock';
   }
 
-  async function punch(type){
-    el('btnIn').disabled = true;
-    el('btnOut').disabled = true;
-    setMsg('處理中…', 'warn');
+  function getGps(){
+    return new Promise((resolve)=>{
+      navigator.geolocation.getCurrentPosition(
+        pos=>{
+          lastPos=pos;
+          pillGps.textContent='定位已取得';
+          distText.textContent='已取得（由後端判斷圍欄）';
+          setStatus('ok','定位成功，可以打卡。');
+          resolve(pos);
+        },
+        ()=>{
+          pillGps.textContent='定位失敗';
+          setStatus('bad','定位失敗：請允許定位權限後再試一次。');
+          showCloseBtn();
+          resolve(null); // ✅ 不 reject，避免整個 init 爆掉
+        },
+        { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
+      );
+    });
+  }
 
+  function fmtErr(e){
+    const code = e && e.code ? e.code : '';
+    const msg  = e && e.message ? e.message : String(e || '');
+    return (code ? `(code: ${code}) ` : '') + msg;
+  }
+
+  async function postClock(action){
     try{
       if(!profile) throw new Error('尚未登入');
 
-      lastGeo = await getGeo();
-      if(!lastGeo || lastGeo.error){
-        setMsg('定位未取得，請允許定位後再打卡。', 'bad');
+      if(!lastPos) await getGps();
+      if(!lastPos){
+        setStatus('bad','定位未取得，請允許定位後再打卡。');
+        showCloseBtn();
         return;
       }
 
+      setStatus('', '送出打卡中…');
+
       const payload = {
-        action: type,
+        action,
         userId: profile.userId,
-        lat: lastGeo.lat,
-        lng: lastGeo.lng,
-        accuracy: lastGeo.accuracy,
+        lat: lastPos.coords.latitude,
+        lng: lastPos.coords.longitude,
+        accuracy: lastPos.coords.accuracy,
         device: navigator.userAgent || '',
         note: '',
-        liffId: LIFF_ID   // ✅ 讓 /api/clock 生成正確 LIFF deep link 的 Flex 按鈕
+        liffId: LIFF_ID // ✅ 讓 /api/clock 產生正確 LIFF deep link
       };
 
       const resp = await fetch('/api/clock', {
@@ -305,70 +261,87 @@
       const data = await resp.json();
 
       if(data.ok){
-        setMsg(data.message || '打卡成功', 'ok');
+        setStatus('ok', `✅ 打卡成功（${data.status || 'OK'}）`);
 
-        // ⚠️ 必須在 LINE 內才能送訊息
-        try{
-          if(window.liff && typeof liff.isInClient === 'function' && !liff.isInClient()){
-            setMsg('打卡成功，但目前不是在 LINE 內開啟（無法發送 Flex）。', 'warn');
-            return;
-          }
-        }catch(e){}
-
-        // ✅ 發送 Flex（若失敗就顯示原因）
+        // ✅ 員工端發 Flex（發送失敗就顯示原因，不關閉視窗）
         if(data.flex && window.liff && typeof liff.sendMessages === 'function'){
           try{
             await liff.sendMessages([data.flex]);
           }catch(e){
-            setMsg('打卡成功，但 Flex 發送失敗：' + (e && e.message ? e.message : e), 'warn');
+            setStatus('warn', '打卡成功，但 Flex 發送失敗：' + fmtErr(e));
+            showCloseBtn();
             return;
           }
         }else{
-          setMsg('打卡成功，但未收到 Flex 內容（請檢查 /api/clock 是否回傳 flex）。', 'warn');
+          setStatus('warn', '打卡成功，但未收到 Flex 內容（請檢查 /api/clock 回傳）。');
+          showCloseBtn();
           return;
         }
 
-        // 發送成功才自動關閉
-        try{ if(window.liff && typeof liff.closeWindow === 'function') liff.closeWindow(); }catch(e){}
+        // ✅ 只有 Flex 發送成功才關閉
+        try{
+          if(window.liff && typeof liff.closeWindow === 'function'){
+            liff.closeWindow();
+            return;
+          }
+        }catch(e){}
+        showCloseBtn();
         return;
       }
 
-      setMsg(data.message || '打卡失敗', 'bad');
-    } catch(err){
-      setMsg('送出失敗：' + (err && err.message ? err.message : err), 'bad');
-    } finally{
-      el('btnIn').disabled = false;
-      el('btnOut').disabled = false;
+      setStatus('bad', data.message || '打卡失敗');
+      showCloseBtn();
+    }catch(err){
+      setStatus('bad','送出失敗：' + (err && err.message ? err.message : err));
+      showCloseBtn();
     }
+  }
+
+  el('btnIn').addEventListener('click', ()=>postClock('IN'));
+  el('btnOut').addEventListener('click', ()=>postClock('OUT'));
+
+  btnCopyId.addEventListener('click', async ()=>{
+    try{
+      await navigator.clipboard.writeText(profile.userId);
+      setStatus('ok','✅ 已複製 LINE ID，請貼到 Sheets employees');
+    }catch(e){}
+  });
+
+  function changeMonth(delta){
+    const [y,m] = currentMonth.split('-').map(Number);
+    const d = new Date(y, m-1 + delta, 1);
+    currentMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    monthLabel.textContent = currentMonth;
+    if(profile && profile.userId) loadSchedule(currentMonth);
+  }
+
+  function fmtSegs(segs){
+    if(!segs || !segs.length) return '—';
+    return segs.map(s=>`${s.start}-${s.end}`).join(' / ');
   }
 
   async function loadSchedule(month){
     try{
-      setScheduleMsg('載入班表中…', 'warn');
-      el('scheduleList').innerHTML = '';
-
+      setScheduleStatus('', '載入班表中…');
+      scheduleList.innerHTML = '';
       const resp = await fetch('/api/schedule', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ userId: profile.userId, month })
       });
-
       const data = await resp.json();
       if(!data.ok){
-        setScheduleMsg(data.message || '班表讀取失敗', 'bad');
+        setScheduleStatus('bad', data.message || '班表讀取失敗');
         return;
       }
-
-      setScheduleMsg(`✅ 已載入 ${month} 班表`, 'ok');
-
+      setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
       const items = data.items || [];
       for(const it of items){
         const badgeCls = (it.type === 'WORK') ? 'badge work' : 'badge off';
         const badgeTxt = (it.type === 'WORK') ? '上班' : (it.type === 'LEAVE' ? '請假' : '休');
-        const segTxt = (it.segments && it.segments.length) ? it.segments.map(s=>`${s.start}-${s.end}`).join(' / ') : '—';
-
+        const segTxt = fmtSegs(it.segments);
         const div = document.createElement('div');
-        div.className = 'item';
+        div.className='item';
         div.innerHTML = `
           <div>
             <div class="d">${it.date}</div>
@@ -377,52 +350,61 @@
           </div>
           <div class="${badgeCls}">${badgeTxt}</div>
         `;
-        el('scheduleList').appendChild(div);
+        scheduleList.appendChild(div);
+      }
+      if(items.length===0) setScheduleStatus('warn', '這個月沒有班表資料（或你尚未同步排班）');
+    }catch(err){
+      setScheduleStatus('bad', '班表載入失敗：' + (err && err.message ? err.message : err));
+    }
+  }
+
+  async function init(){
+    try{
+      await liff.init({ liffId: LIFF_ID });
+
+      try{
+        clientText.textContent = (liff.isInClient && liff.isInClient()) ? 'LINE內（可關閉）' : '非LINE內（不可自動關閉）';
+      }catch(e){ clientText.textContent='未知'; }
+
+      if(!liff.isLoggedIn()){
+        pillLogin.textContent='未登入';
+        if(!liff.isInClient || !liff.isInClient()){
+          setStatus('warn','請用 LINE 內開啟此頁面（LIFF）。');
+          showCloseBtn();
+          return;
+        }
+        setStatus('warn','請先登入 LINE 才能打卡。');
+        liff.login(); return;
       }
 
-      if(items.length===0) setScheduleMsg('這個月沒有班表資料（或你尚未同步排班）', 'warn');
+      profile = await liff.getProfile();
+      pillLogin.textContent='已登入';
+      helloEl.textContent = `嗨 ${profile.displayName}，請先取得定位後再打卡。`;
+      uidText.textContent = profile.userId || '--';
+      btnCopyId.style.display = profile.userId ? 'block' : 'none';
+
+      // ✅ 先套用 deep link，再決定要不要抓 GPS
+      const desired = applyLiffState();
+
+      monthLabel.textContent = currentMonth;
+      btnPrev.addEventListener('click', ()=> changeMonth(-1));
+      btnNext.addEventListener('click', ()=> changeMonth(1));
+
+      // 只有在打卡頁才主動抓定位（班表可直接看）
+      if(desired === 'clock'){
+        setStatus('', '正在取得定位…');
+        await getGps();
+      }else{
+        setStatus('ok', '已切換到班表頁（打卡才需要定位）。');
+      }
+
     }catch(err){
-      setScheduleMsg('班表載入失敗：' + (err && err.message ? err.message : err), 'bad');
+      setStatus('bad','初始化失敗：' + (err && err.message ? err.message : err));
+      showCloseBtn();
     }
   }
 
-  function changeMonth(delta){
-    const [y,m] = currentMonth.split('-').map(Number);
-    const d = new Date(y, m-1 + delta, 1);
-    currentMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    el('monthLabel').textContent = currentMonth;
-    if(profile && profile.userId) loadSchedule(currentMonth);
-  }
-  el('btnPrev').addEventListener('click', ()=> changeMonth(-1));
-  el('btnNext').addEventListener('click', ()=> changeMonth(1));
-
-  el('btnIn').onclick = () => punch('IN');
-  el('btnOut').onclick = () => punch('OUT');
-
-  async function boot(){
-    if (!LIFF_ID) {
-      setMsg('請先設定 LIFF_ID', 'bad');
-      return;
-    }
-
-    await liff.init({ liffId: LIFF_ID });
-    if (!liff.isLoggedIn()) {
-      liff.login();
-      return;
-    }
-
-    profile = await liff.getProfile();
-    userId = profile.userId;
-    el('who').textContent = `你好，${profile.displayName}`;
-    await refreshStatus();
-
-    // ✅ 套用 deep link（Flex 底下按鈕會帶 liff.state）
-    applyLiffState();
-  }
-
-  boot().catch(e=>{
-    setMsg('初始化失敗：' + (e && e.message ? e.message : String(e)), 'bad');
-  });
+  init();
 </script>
 </body>
 </html>
