@@ -19,20 +19,17 @@ export async function onRequestPost({ request, env }) {
     out = { ok:false, code:"BAD_GAS_RESPONSE", message:"GAS 回應非 JSON", raw_head: text.slice(0,500) };
   }
 
-  // ✅ 成功就補上新版 Flex（不依賴 GAS 是否回 flex）
+  // ✅ 成功就補上「保證合法」的 Flex（不再依賴 GAS 回 flex）
   if (out && out.ok) {
     const liffId = String(body.liffId || env.LIFF_ID || "2008810311-jmqyUaTN").trim();
-    out.flex = buildPunchFlex({ liffId, body, out });
+    out.flex = buildPunchFlex({ liffId, body, out, env });
   }
 
   return json(out, 200);
 }
 
 export async function onRequestOptions() {
-  return new Response(null, {
-    status: 204,
-    headers: corsHeaders(),
-  });
+  return new Response(null, { status: 204, headers: corsHeaders() });
 }
 
 function json(obj, status=200){
@@ -50,36 +47,33 @@ function corsHeaders(){
   };
 }
 
-/* ================= Flex Builder（新版外觀＋LIFF深連結按鈕） ================= */
+/* ================= Flex Builder（精緻外觀＋LIFF深連結按鈕） ================= */
 
-function buildPunchFlex({ liffId, body, out }) {
+function buildPunchFlex({ liffId, body, out, env }) {
   const action = String(body.action || out.action || "").toUpperCase() === "OUT" ? "OUT" : "IN";
 
   const dt = pickDate(out) || new Date();
-  const dateStr = fmtDateTW(dt);  // YYYY/MM/DD
-  const timeStr = fmtTimeTW(dt);  // HH:mm
+  const dateStr = fmtDateTW(dt); // YYYY/MM/DD
+  const timeStr = fmtTimeTW(dt); // HH:mm
 
-  const locationName = String(out.locationName || out.location_name || "H.R燈藝");
+  const locationName = String(out.locationName || out.location_name || env.LOCATION_NAME || "H.R燈藝");
 
-  // 距離/圍欄（兼容多種回傳）
   const distanceM = toNum(out.distance_m ?? out.distanceM ?? out.fence?.distanceM ?? out.fence?.distance_m ?? null);
   const fenceM    = toNum(out.fence_m    ?? out.fenceM    ?? out.fence?.fenceM    ?? out.fence?.fence_m    ?? null);
+
   const showFence = Number.isFinite(distanceM) && Number.isFinite(fenceM);
+  const lateMins  = toNum(out.mins_late ?? out.late_mins ?? out.lateMins ?? out.shift?.minsLate ?? 0);
+  const showLate  = Number.isFinite(lateMins) && lateMins > 0;
 
-  // 遲到（兼容：shift.minsLate / mins_late / late_mins）
-  const lateMins = toNum(out.mins_late ?? out.late_mins ?? out.lateMins ?? out.shift?.minsLate ?? out.shift?.lateMins ?? 0);
-  const showLate = Number.isFinite(lateMins) && lateMins > 0;
-
-  // 備註（空白就隱藏）
   const note = String(body.note || out.note || "").trim();
   const showNote = note.length > 0;
 
   const empName = String(out.employee?.display_name || out.employee?.name || out.name || "").trim();
 
-  // ✅ 按鈕全部導到「正確 LIFF 入口」＋ liff.state
-  const urlClock = `https://liff.line.me/${liffId}?liff.state=${encodeURIComponent("clock")}`;
-  const urlLogs  = `https://liff.line.me/${liffId}?liff.state=${encodeURIComponent("/logs")}`;
-  const urlSched = `https://liff.line.me/${liffId}?liff.state=${encodeURIComponent("schedule")}`;
+  // ✅ 正確 LIFF deep link（一定進 LIFF）
+  const urlClock = `https://liff.line.me/${liffId}?liff.state=clock`;
+  const urlLogs  = `https://liff.line.me/${liffId}?liff.state=/logs`;
+  const urlSched = `https://liff.line.me/${liffId}?liff.state=schedule`;
 
   const kvRow = (label, value, valueColor) => ({
     type: "box",
@@ -95,16 +89,16 @@ function buildPunchFlex({ liffId, body, out }) {
     type: "box",
     layout: "vertical",
     paddingAll: "4px",
-    paddingStart: "10px",
-    paddingEnd: "10px",
     backgroundColor: bg,
     cornerRadius: "999px",
-    contents: [{ type: "text", text, size: "xs", weight: "bold", color }]
+    contents: [{ type: "text", text, size: "xs", weight: "bold", color }],
+    paddingStart: "10px",
+    paddingEnd: "10px"
   });
 
   const titleLeft = (action === "IN") ? "上班打卡" : "下班打卡";
 
-  const contents = [
+  const bodyContents = [
     {
       type: "box",
       layout: "horizontal",
@@ -133,6 +127,7 @@ function buildPunchFlex({ liffId, body, out }) {
         { type: "text", text: dateStr, size: "sm", color: "#111827", flex: 7, align: "end" }
       ]
     },
+
     { type: "separator", margin: "lg", color: "#E5E7EB" },
 
     kvRow("打卡地點", locationName),
@@ -172,13 +167,7 @@ function buildPunchFlex({ liffId, body, out }) {
         { type: "text", text: "H.R燈藝｜員工打卡", size: "sm", weight: "bold", color: "#F5D34D" }
       ]
     },
-    body: {
-      type: "box",
-      layout: "vertical",
-      paddingAll: "16px",
-      spacing: "md",
-      contents
-    },
+    body: { type: "box", layout: "vertical", paddingAll: "16px", spacing: "md", contents: bodyContents },
     footer: {
       type: "box",
       layout: "vertical",
@@ -192,6 +181,7 @@ function buildPunchFlex({ liffId, body, out }) {
     }
   };
 
+  // ✅ 這個才是 sendMessages 要的「完整 message object」
   return { type: "flex", altText: `${titleLeft} ${timeStr}`, contents: bubble };
 }
 
