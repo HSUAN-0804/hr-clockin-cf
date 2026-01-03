@@ -6,17 +6,30 @@
   <title>H.R燈藝｜員工打卡</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    :root{--bg:#0b0c10;--text:#f5f5f7;--muted:#b7bbc3;--border:rgba(255,255,255,.08);--radius:18px}
+    :root{
+      --bg:#0b0c10;--text:#f5f5f7;--muted:#b7bbc3;--border:rgba(255,255,255,.08);
+      --radius:18px;--card:#111317;--gold:rgba(255,215,0,.75);
+    }
     *{box-sizing:border-box}
     body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
-      background:radial-gradient(1200px 800px at 50% -20%, rgba(255,215,0,.12), transparent 50%),
-                 radial-gradient(900px 600px at 0% 0%, rgba(59,130,246,.12), transparent 55%),
+      background:radial-gradient(1200px 800px at 50% -20%, rgba(255,215,0,.10), transparent 50%),
+                 radial-gradient(900px 600px at 0% 0%, rgba(59,130,246,.10), transparent 55%),
                  var(--bg);color:var(--text)}
-    .wrap{max-width:560px;margin:0 auto;padding:20px 16px 28px}
-    .brand{font-weight:800;letter-spacing:.5px;font-size:14px;color:rgba(255,215,0,.9)}
+    .wrap{max-width:640px;margin:0 auto;padding:18px 14px 28px}
+    .brand{font-weight:800;letter-spacing:.5px;font-size:14px;color:var(--gold)}
     .title{margin:6px 0 12px;font-size:26px;font-weight:900}
-    .card{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 16px 42px rgba(0,0,0,.35)}
+    .tabs{display:flex;gap:10px;margin:10px 0 12px}
+    .tab{
+      flex:1;border:1px solid var(--border);background:rgba(255,255,255,.04);
+      color:rgba(255,255,255,.85);padding:10px 12px;border-radius:14px;font-weight:900;
+      text-align:center;cursor:pointer;user-select:none
+    }
+    .tab.active{border-color:rgba(255,215,0,.25);background:rgba(255,215,0,.10);color:#fff}
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--border);border-radius:var(--radius);padding:16px;
+      box-shadow:0 16px 42px rgba(0,0,0,.35)
+    }
     .row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
     .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;border:1px solid var(--border);
       background:rgba(0,0,0,.25);color:var(--muted);font-size:13px}
@@ -26,7 +39,8 @@
     button{width:100%;border:none;border-radius:16px;padding:14px 14px;font-size:18px;font-weight:900;color:var(--text);
       background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));border:1px solid var(--border);cursor:pointer}
     button:active{transform:scale(.99)}
-    .status{margin-top:12px;padding:12px 12px;border-radius:14px;border:1px solid var(--border);background:rgba(0,0,0,.22);font-size:14px;line-height:1.4;color:var(--muted)}
+    .status{margin-top:12px;padding:12px 12px;border-radius:14px;border:1px solid var(--border);
+      background:rgba(0,0,0,.22);font-size:14px;line-height:1.4;color:var(--muted)}
     .status.ok{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95)}
     .status.bad{border-color:rgba(239,68,68,.38);color:rgba(254,226,226,.95)}
     .status.warn{border-color:rgba(245,158,11,.35);color:rgba(255,237,213,.95)}
@@ -34,16 +48,31 @@
     .kv div{font-size:13px;color:var(--muted)}
     .kv b{color:var(--text);font-weight:800;word-break:break-all}
     .mini{margin-top:12px;color:rgba(255,255,255,.55);font-size:12px}
-    .softbtn{
-      margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:800;
+    .softbtn{margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
       background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.25);color:rgba(255,255,255,.92);
-      cursor:pointer;display:none;
-    }
-    .closebtn{
-      margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
+      cursor:pointer;display:none}
+    .closebtn{margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
       background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.96);
-      cursor:pointer;display:none;
+      cursor:pointer;display:none}
+    .hidden{display:none}
+    /* schedule */
+    .scheduleTop{display:flex;gap:10px;align-items:center;margin:8px 0 12px}
+    .monthBox{
+      flex:1;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.04);
+      padding:10px 12px;color:#fff;font-weight:900;display:flex;justify-content:space-between;align-items:center
     }
+    .monthBtn{flex:0 0 auto;padding:10px 12px;border-radius:14px;font-weight:900}
+    .list{margin-top:10px;display:flex;flex-direction:column;gap:10px}
+    .item{
+      border:1px solid var(--border);border-radius:14px;padding:12px;background:rgba(0,0,0,.22);
+      display:flex;justify-content:space-between;gap:10px;align-items:flex-start
+    }
+    .item .d{font-weight:900}
+    .badge{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
+    .badge.work{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95)}
+    .badge.off{border-color:rgba(239,68,68,.35);color:rgba(254,226,226,.95)}
+    .seg{color:#fff;font-weight:800}
+    .note{color:rgba(255,255,255,.60);font-size:12px;margin-top:4px}
   </style>
 </head>
 <body>
@@ -51,7 +80,13 @@
     <div class="brand">員工專用</div>
     <div class="title">H.R燈藝｜打卡</div>
 
-    <div class="card">
+    <div class="tabs">
+      <div class="tab active" id="tabClock">打卡</div>
+      <div class="tab" id="tabSchedule">本月班表</div>
+    </div>
+
+    <!-- CLOCK PANEL -->
+    <div class="card" id="panelClock">
       <div class="row">
         <div class="pill" id="pillLogin">尚未登入</div>
         <div class="pill" id="pillGps">定位未取得</div>
@@ -77,13 +112,37 @@
       <div class="status" id="statusBox">準備中…</div>
       <div class="mini">若定位失敗：請到手機「設定 → 隱私權 → 定位服務」允許 LINE 使用定位。</div>
     </div>
+
+    <!-- SCHEDULE PANEL -->
+    <div class="card hidden" id="panelSchedule">
+      <div class="scheduleTop">
+        <div class="monthBox">
+          <span>月份</span>
+          <span id="monthLabel">----</span>
+        </div>
+        <button class="monthBtn" id="btnPrev">上月</button>
+        <button class="monthBtn" id="btnNext">下月</button>
+      </div>
+
+      <div class="status" id="scheduleStatus">尚未載入…</div>
+      <div class="list" id="scheduleList"></div>
+      <div class="mini">班表來源：shift_overrides ＞ shift_month（PT）＞ shift_templates（FT）。</div>
+    </div>
   </div>
 
 <script>
-  // ✅ 你原本可正常 init 的 LIFF ID（請維持這個）
-  const LIFF_ID = "2008810311-jmqyUaTN";
+  // ✅ 你目前可正常 init 的 LIFF ID
+  const LIFF_ID = "2008715504-WYC2RKbW";
 
   const el = (id)=>document.getElementById(id);
+
+  // tabs
+  const tabClock = el('tabClock');
+  const tabSchedule = el('tabSchedule');
+  const panelClock = el('panelClock');
+  const panelSchedule = el('panelSchedule');
+
+  // clock UI
   const pillLogin = el('pillLogin');
   const pillGps = el('pillGps');
   const helloEl = el('hello');
@@ -95,53 +154,75 @@
   const btnClose = el('btnClose');
   const clockEl = el('clock');
 
+  // schedule UI
+  const monthLabel = el('monthLabel');
+  const btnPrev = el('btnPrev');
+  const btnNext = el('btnNext');
+  const scheduleStatus = el('scheduleStatus');
+  const scheduleList = el('scheduleList');
+
   let profile = null;
   let lastPos = null;
+
+  let currentMonth = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  })();
+
+  function setTab(which){
+    if(which === 'clock'){
+      tabClock.classList.add('active'); tabSchedule.classList.remove('active');
+      panelClock.classList.remove('hidden'); panelSchedule.classList.add('hidden');
+    }else{
+      tabSchedule.classList.add('active'); tabClock.classList.remove('active');
+      panelSchedule.classList.remove('hidden'); panelClock.classList.add('hidden');
+      // lazy load
+      if(profile && profile.userId) loadSchedule(currentMonth);
+    }
+  }
+
+  tabClock.addEventListener('click', ()=>setTab('clock'));
+  tabSchedule.addEventListener('click', ()=>setTab('schedule'));
 
   function setStatus(type, text){
     statusBox.className = 'status ' + (type || '');
     statusBox.textContent = text;
   }
-  function showCloseBtn(){ if(btnClose) btnClose.style.display = 'block'; }
-
-  btnClose && btnClose.addEventListener('click', ()=>{
-    try { liff.closeWindow(); } catch(e) {}
-  });
+  function setScheduleStatus(type, text){
+    scheduleStatus.className = 'status ' + (type || '');
+    scheduleStatus.textContent = text;
+  }
+  function showCloseBtn(){ btnClose.style.display = 'block'; }
+  btnClose.addEventListener('click', ()=>{ try{ liff.closeWindow(); }catch(e){} });
 
   function tickClock(){
     const d = new Date();
-    const hh = String(d.getHours()).padStart(2,'0');
-    const mm = String(d.getMinutes()).padStart(2,'0');
-    clockEl.textContent = `${hh}:${mm}`;
+    clockEl.textContent = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   }
   setInterval(tickClock, 1000); tickClock();
 
   async function init(){
     if(!LIFF_ID){
-      setStatus('bad', '未設定 LIFF_ID');
+      setStatus('bad','未設定 LIFF_ID');
       return;
     }
 
     try{
       await liff.init({ liffId: LIFF_ID });
 
-      try {
+      try{
         clientText.textContent = (liff.isInClient && liff.isInClient()) ? 'LINE內（可關閉）' : '非LINE內（不可自動關閉）';
-      } catch(e) {
-        clientText.textContent = '未知';
-      }
+      }catch(e){ clientText.textContent='未知'; }
 
       if(!liff.isLoggedIn()){
         pillLogin.textContent = '未登入';
-
         if(!liff.isInClient || !liff.isInClient()){
-          setStatus('warn', '請用手機 LINE 內開啟此頁面才能打卡（此頁為 LIFF）。');
+          setStatus('warn','請用手機 LINE 內開啟此頁面才能打卡（此頁為 LIFF）。');
           helloEl.textContent = '請用 LINE 打開此頁。';
           showCloseBtn();
           return;
         }
-
-        setStatus('warn', '請先登入 LINE 才能打卡。');
+        setStatus('warn','請先登入 LINE 才能打卡。');
         liff.login();
         return;
       }
@@ -149,16 +230,19 @@
       profile = await liff.getProfile();
       pillLogin.textContent = '已登入';
       helloEl.textContent = `嗨 ${profile.displayName}，請先取得定位後再打卡。`;
-
       uidText.textContent = profile.userId || '--';
-      if(profile.userId){
-        btnCopyId.style.display = 'block';
-      }
+      btnCopyId.style.display = profile.userId ? 'block' : 'none';
 
       setStatus('', '正在取得定位…');
       await getGps();
+
+      // schedule init
+      monthLabel.textContent = currentMonth;
+      btnPrev.addEventListener('click', ()=> changeMonth(-1));
+      btnNext.addEventListener('click', ()=> changeMonth(1));
+
     }catch(err){
-      setStatus('bad', '初始化失敗：' + (err && err.message ? err.message : err));
+      setStatus('bad','初始化失敗：' + (err && err.message ? err.message : err));
       showCloseBtn();
     }
   }
@@ -166,23 +250,23 @@
   function getGps(){
     return new Promise((resolve,reject)=>{
       if(!navigator.geolocation){
-        pillGps.textContent = '不支援定位';
+        pillGps.textContent='不支援定位';
         setStatus('bad','此裝置不支援定位，無法打卡。');
         showCloseBtn();
         return reject(new Error('no geolocation'));
       }
       navigator.geolocation.getCurrentPosition(
-        (pos)=>{
+        pos=>{
           lastPos = pos;
-          pillGps.textContent = '定位已取得';
-          distText.textContent = '已取得（由後端判斷圍欄）';
-          setStatus('ok', '定位成功，可以打卡。');
+          pillGps.textContent='定位已取得';
+          distText.textContent='已取得（由後端判斷圍欄）';
+          setStatus('ok','定位成功，可以打卡。');
           resolve(pos);
         },
         ()=>{
-          pillGps.textContent = '定位失敗';
-          distText.textContent = '--';
-          setStatus('bad', '定位失敗：請允許定位權限後再試一次。');
+          pillGps.textContent='定位失敗';
+          distText.textContent='--';
+          setStatus('bad','定位失敗：請允許定位權限後再試一次。');
           showCloseBtn();
           reject(new Error('gps fail'));
         },
@@ -209,59 +293,106 @@
 
       const resp = await fetch('/api/clock', {
         method:'POST',
-        headers:{ 'Content-Type':'application/json' },
+        headers:{'Content-Type':'application/json'},
         body: JSON.stringify(payload)
       });
 
       const data = await resp.json();
 
       if(data.ok){
-        setStatus('ok', `✅ 打卡成功｜距離 ${data.distance_m}m`);
-
-        // ✅ 改回最一開始：不在前端送 Flex，交給 GAS 用官方帳號推送
-        // ✅ 成功後直接關閉
-        try {
-          if (window.liff && typeof liff.closeWindow === 'function') {
+        setStatus('ok', `✅ 打卡成功（${data.status || 'OK'}）`);
+        try{
+          if(window.liff && typeof liff.closeWindow === 'function'){
             liff.closeWindow();
             return;
           }
-        } catch(e) {}
-
+        }catch(e){}
         showCloseBtn();
-        return;
+      }else{
+        setStatus('bad', data.message || '打卡失敗');
+        showCloseBtn();
       }
-
-      setStatus('bad', data.message || '打卡失敗');
-      showCloseBtn();
     }catch(err){
-      setStatus('bad', '送出失敗：' + (err && err.message ? err.message : err));
+      setStatus('bad','送出失敗：' + (err && err.message ? err.message : err));
       showCloseBtn();
     }
   }
 
+  el('btnIn').addEventListener('click', ()=>postClock('IN'));
+  el('btnOut').addEventListener('click', ()=>postClock('OUT'));
+
   btnCopyId.addEventListener('click', async ()=>{
     try{
-      const uid = (profile && profile.userId) ? profile.userId : uidText.textContent;
-      if(!uid || uid === '--'){
-        setStatus('warn','尚未取得 LINE ID，請稍後再試。');
-        return;
-      }
+      const uid = profile && profile.userId ? profile.userId : uidText.textContent;
       await navigator.clipboard.writeText(uid);
-      setStatus('ok', '✅ 已複製 LINE ID，請貼到 Sheets 的 employees → line_user_id');
+      setStatus('ok','✅ 已複製 LINE ID，請貼到 Sheets 的 employees → line_user_id');
     }catch(e){
-      const uid = (profile && profile.userId) ? profile.userId : uidText.textContent;
-      const ta = document.createElement('textarea');
-      ta.value = uid;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
+      const uid = profile && profile.userId ? profile.userId : uidText.textContent;
+      const ta=document.createElement('textarea');
+      ta.value=uid; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
       document.body.removeChild(ta);
-      setStatus('ok', '✅ 已複製 LINE ID，請貼到 Sheets 的 employees → line_user_id');
+      setStatus('ok','✅ 已複製 LINE ID，請貼到 Sheets 的 employees → line_user_id');
     }
   });
 
-  el('btnIn').addEventListener('click', ()=>postClock('IN'));
-  el('btnOut').addEventListener('click', ()=>postClock('OUT'));
+  function changeMonth(delta){
+    const [y,m] = currentMonth.split('-').map(Number);
+    const d = new Date(y, m-1 + delta, 1);
+    currentMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    monthLabel.textContent = currentMonth;
+    if(profile && profile.userId) loadSchedule(currentMonth);
+  }
+
+  function fmtSegs(segs){
+    if(!segs || !segs.length) return '—';
+    return segs.map(s=>`${s.start}-${s.end}`).join(' / ');
+  }
+
+  async function loadSchedule(month){
+    try{
+      setScheduleStatus('', '載入班表中…');
+      scheduleList.innerHTML = '';
+
+      const resp = await fetch('/api/schedule', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ userId: profile.userId, month })
+      });
+      const data = await resp.json();
+
+      if(!data.ok){
+        setScheduleStatus('bad', data.message || '班表讀取失敗');
+        return;
+      }
+
+      setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
+      const items = data.items || [];
+      for(const it of items){
+        const badgeCls = (it.type === 'WORK') ? 'badge work' : 'badge off';
+        const badgeTxt = (it.type === 'WORK') ? '上班' : (it.type === 'LEAVE' ? '請假' : '休');
+        const segTxt = fmtSegs(it.segments);
+
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <div>
+            <div class="d">${it.date}</div>
+            <div class="seg">${segTxt}</div>
+            ${it.note ? `<div class="note">${it.note}</div>` : ``}
+          </div>
+          <div class="${badgeCls}">${badgeTxt}</div>
+        `;
+        scheduleList.appendChild(div);
+      }
+
+      if(items.length === 0){
+        setScheduleStatus('warn', '這個月沒有班表資料（或你還沒同步排班）');
+      }
+    }catch(err){
+      setScheduleStatus('bad', '班表載入失敗：' + (err && err.message ? err.message : err));
+    }
+  }
 
   init();
 </script>
