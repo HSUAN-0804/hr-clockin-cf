@@ -269,7 +269,7 @@
         // ✅ 員工端發 Flex（不扣 OA 則數）
         try{
           if(data.flex && window.liff && typeof liff.sendMessages === 'function'){
-            await liff.sendMessages([data.flex]);
+await liff.sendMessages([{ type: "text", text: "打卡測試：文字訊息" }]);
           }
         }catch(e){
           // 送失敗也不影響打卡本體
