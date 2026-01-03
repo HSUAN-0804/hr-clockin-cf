@@ -5,91 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>H.R燈藝｜員工打卡</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
   <style>
     :root{
       --bg:#0b0c10;--text:#f5f5f7;--muted:#b7bbc3;--border:rgba(255,255,255,.08);
       --radius:18px;--gold:rgba(255,215,0,.75);
     }
     *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:ui-sans-serif,system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
-      background:
-        radial-gradient(1200px 800px at 50% -20%, rgba(255,215,0,.10), transparent 50%),
-        radial-gradient(900px 600px at 0% 0%, rgba(59,130,246,.10), transparent 55%),
-        var(--bg);
-      color:var(--text)
-    }
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+      background:radial-gradient(1200px 800px at 50% -20%, rgba(255,215,0,.10), transparent 50%),
+                 radial-gradient(900px 600px at 0% 0%, rgba(59,130,246,.10), transparent 55%),
+                 var(--bg);color:var(--text)}
     .wrap{max-width:640px;margin:0 auto;padding:18px 14px 28px}
     .brand{font-weight:800;letter-spacing:.5px;font-size:14px;color:var(--gold)}
     .title{margin:6px 0 12px;font-size:26px;font-weight:900}
     .tabs{display:flex;gap:10px;margin:10px 0 12px}
-    .tab{
-      flex:1;border:1px solid var(--border);background:rgba(255,255,255,.04);color:rgba(255,255,255,.85);
-      padding:10px 12px;border-radius:14px;font-weight:900;text-align:center;cursor:pointer;user-select:none
-    }
+    .tab{flex:1;border:1px solid var(--border);background:rgba(255,255,255,.04);color:rgba(255,255,255,.85);
+      padding:10px 12px;border-radius:14px;font-weight:900;text-align:center;cursor:pointer;user-select:none}
     .tab.active{border-color:rgba(255,215,0,.25);background:rgba(255,215,0,.10);color:#fff}
-    .card{
-      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border:1px solid var(--border);
-      border-radius:var(--radius);
-      padding:16px;
-      box-shadow:0 16px 42px rgba(0,0,0,.35)
-    }
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 16px 42px rgba(0,0,0,.35)}
     .row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-    .pill{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:8px 10px;border-radius:999px;border:1px solid var(--border);
-      background:rgba(0,0,0,.25);color:var(--muted);font-size:13px
-    }
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;border:1px solid var(--border);
+      background:rgba(0,0,0,.25);color:var(--muted);font-size:13px}
     .clock{font-size:44px;font-weight:900;letter-spacing:1px;margin:10px 0 8px}
     .sub{color:var(--muted);font-size:13px;line-height:1.4}
-    .kv{display:grid;grid-template-columns:110px 1fr;gap:8px;margin-top:10px}
-    .kv div{font-size:13px;color:var(--muted)}
-    .kv b{color:var(--text);font-weight:800;word-break:break-all}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
-    button{
-      width:100%;border:none;border-radius:16px;padding:14px 14px;font-size:18px;font-weight:900;color:var(--text);
-      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
-      border:1px solid var(--border);
-      cursor:pointer
-    }
+    button{width:100%;border:none;border-radius:16px;padding:14px 14px;font-size:18px;font-weight:900;color:var(--text);
+      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));border:1px solid var(--border);cursor:pointer}
     button:active{transform:scale(.99)}
     button[disabled]{opacity:.55;cursor:not-allowed}
-    .status{
-      margin-top:12px;padding:12px 12px;border-radius:14px;border:1px solid var(--border);
-      background:rgba(0,0,0,.22);
-      font-size:14px;line-height:1.4;color:var(--muted);
-      white-space:pre-line
-    }
+    .status{margin-top:12px;padding:12px 12px;border-radius:14px;border:1px solid var(--border);
+      background:rgba(0,0,0,.22);font-size:14px;line-height:1.4;color:var(--muted);white-space:pre-line}
     .status.ok{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95)}
     .status.bad{border-color:rgba(239,68,68,.38);color:rgba(254,226,226,.95)}
     .status.warn{border-color:rgba(245,158,11,.35);color:rgba(255,237,213,.95)}
+    .kv{display:grid;grid-template-columns:110px 1fr;gap:8px;margin-top:10px}
+    .kv div{font-size:13px;color:var(--muted)}
+    .kv b{color:var(--text);font-weight:800;word-break:break-all}
     .mini{margin-top:12px;color:rgba(255,255,255,.55);font-size:12px}
-    .softbtn{
-      margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
+    .softbtn{margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
       background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.25);color:rgba(255,255,255,.92);
-      cursor:pointer;display:none
-    }
-    .closebtn{
-      margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
+      cursor:pointer;display:none}
+    .closebtn{margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
       background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.96);
-      cursor:pointer;display:none
-    }
+      cursor:pointer;display:none}
     .hidden{display:none}
 
     /* schedule */
     .scheduleTop{display:flex;gap:10px;align-items:center;margin:8px 0 12px}
-    .monthBox{
-      flex:1;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.04);
-      padding:10px 12px;color:#fff;font-weight:900;display:flex;justify-content:space-between;align-items:center
-    }
+    .monthBox{flex:1;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.04);
+      padding:10px 12px;color:#fff;font-weight:900;display:flex;justify-content:space-between;align-items:center}
     .monthBtn{flex:0 0 auto;padding:10px 12px;border-radius:14px;font-weight:900}
     .list{margin-top:10px;display:flex;flex-direction:column;gap:10px}
-    .item{
-      border:1px solid var(--border);border-radius:14px;padding:12px;background:rgba(0,0,0,.22);
-      display:flex;justify-content:space-between;gap:10px;align-items:flex-start
-    }
+    .item{border:1px solid var(--border);border-radius:14px;padding:12px;background:rgba(0,0,0,.22);
+      display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
     .item .d{font-weight:900}
     .badge{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
     .badge.work{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95)}
@@ -153,7 +123,10 @@
   </div>
 
 <script>
+  // ✅ 你的 LIFF ID（照你目前）
   const LIFF_ID = "2008810311-jmqyUaTN";
+  // ✅ Flex 唯一按鈕要開的網址（最乾淨最穩）
+  const LIFF_HOME_URL = `https://liff.line.me/${LIFF_ID}`;
 
   const el = (id)=>document.getElementById(id);
   const tabClock = el('tabClock'), tabSchedule = el('tabSchedule');
@@ -197,18 +170,6 @@
   tabClock.addEventListener('click', ()=>setTab('clock'));
   tabSchedule.addEventListener('click', ()=>setTab('schedule'));
 
-  // ✅ Flex 按鈕 deep link：liff.state=clock / schedule
-  function applyLiffState(){
-    const sp = new URLSearchParams(location.search);
-    const s = String(sp.get('liff.state') || '').trim().toLowerCase();
-    if(s === 'schedule' || s === 'shift'){
-      setTab('schedule');
-      return 'schedule';
-    }
-    setTab('clock');
-    return 'clock';
-  }
-
   function setStatus(type, text){
     statusBox.className = 'status ' + (type || '');
     statusBox.textContent = text;
@@ -226,7 +187,6 @@
   }
   setInterval(tickClock, 1000); tickClock();
 
-  // ✅ GPS：失敗不 reject（避免流程整個爆掉）
   function getGps(){
     return new Promise((resolve)=>{
       navigator.geolocation.getCurrentPosition(
@@ -237,7 +197,7 @@
           setStatus('ok','定位成功，可以打卡。');
           resolve(pos);
         },
-        err=>{
+        ()=>{
           lastPos = null;
           pillGps.textContent='定位失敗';
           distText.textContent='未取得';
@@ -256,117 +216,66 @@
     return (c ? `CODE:${c} ` : '') + m;
   }
 
-  // ✅ 100%合法 Flex（照官方結構：bubble + styles + header/body/footer）
-  function fmtDateTW(d){
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone:"Asia/Taipei", year:"numeric", month:"2-digit", day:"2-digit"
-    }).formatToParts(d);
-    const y = parts.find(p=>p.type==="year")?.value || "0000";
-    const m = parts.find(p=>p.type==="month")?.value || "00";
-    const da= parts.find(p=>p.type==="day")?.value || "00";
-    return `${y}/${m}/${da}`;
-  }
-  function fmtTimeTW(d){
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone:"Asia/Taipei", hour:"2-digit", minute:"2-digit", hour12:false
-    }).formatToParts(d);
-    const hh = parts.find(p=>p.type==="hour")?.value || "00";
-    const mm = parts.find(p=>p.type==="minute")?.value || "00";
-    return `${hh}:${mm}`;
-  }
-  function toNum(v){
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
-  }
-
-  function buildPunchFlex(action, data){
+  // ✅ 100%最簡單合法 Flex：只一顆按鈕
+  function buildSimpleClockFlex(action){
     const now = new Date();
-    const titleLeft = (String(action).toUpperCase() === 'OUT') ? '下班打卡' : '上班打卡';
-    const dateStr = fmtDateTW(now);
-    const timeStr = fmtTimeTW(now);
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+    const timeStr = `${hh}:${mm}`;
+    const titleLeft = String(action).toUpperCase()==='OUT' ? '下班打卡' : '上班打卡';
 
-    const locationName = String(data.locationName || data.location_name || 'H.R燈藝');
-
-    const distanceM = toNum(data.distance_m ?? data.distanceM ?? data.fence?.distanceM ?? null);
-    const fenceM    = toNum(data.fence_m ?? data.fenceM ?? data.fence?.fenceM ?? null);
-    const lateMins  = toNum(data.mins_late ?? data.late_mins ?? data.lateMins ?? data.shift?.minsLate ?? 0) || 0;
-
-    const showFence = (distanceM != null && fenceM != null);
-
-    const urlClock = `https://liff.line.me/${LIFF_ID}?liff.state=clock`;
-    const urlLogs  = `https://liff.line.me/${LIFF_ID}?liff.state=/logs`;
-    const urlSched = `https://liff.line.me/${LIFF_ID}?liff.state=schedule`;
-
-    const kv = (k, v, color) => ({
-      type:"box",
-      layout:"horizontal",
-      contents:[
-        { type:"text", text:k, size:"sm", color:"#6B7280", flex:3 },
-        { type:"text", text:String(v), size:"sm", color:(color||"#111827"), flex:7, align:"end", wrap:true }
-      ]
-    });
-
-    const bodyContents = [
-      { type:"text", text:"你已打卡成功", size:"md", weight:"bold", color:"#16A34A" },
-
-      {
-        type:"box", layout:"horizontal",
-        contents:[
-          { type:"text", text:titleLeft, size:"md", weight:"bold", color:"#111827", flex:5 },
-          { type:"text", text:timeStr, size:"xxl", weight:"bold", color:"#111827", flex:5, align:"end" }
-        ],
-        alignItems:"baseline"
-      },
-
-      kv("日期", dateStr),
-
-      { type:"separator" },
-
-      kv("打卡地點", locationName),
-
-      ...(showFence ? [kv("距離店面", `${Math.round(distanceM)}m / ${Math.round(fenceM)}m`, (distanceM<=fenceM ? "#16A34A" : "#DC2626"))] : []),
-
-      (lateMins > 0 ? kv("異常紀錄", `遲到 ${lateMins} 分鐘`, "#DC2626") : kv("異常紀錄", "無", "#16A34A"))
-    ];
-
-    const bubble = {
-      type:"bubble",
-      styles:{
-        header:{ backgroundColor:"#0F172A" },
-        body:{ backgroundColor:"#FFFFFF" },
-        footer:{ backgroundColor:"#FFFFFF" }
-      },
-      header:{
-        type:"box",
-        layout:"vertical",
-        contents:[
-          { type:"text", text:"H.R燈藝｜員工打卡", size:"sm", weight:"bold", color:"#F5D34D" }
-        ]
-      },
-      body:{
-        type:"box",
-        layout:"vertical",
-        spacing:"md",
-        contents: bodyContents
-      },
-      footer:{
-        type:"box",
-        layout:"vertical",
-        spacing:"sm",
-        contents:[
-          { type:"button", style:"primary", action:{ type:"uri", label:"開啟打卡頁面", uri:urlClock } },
-          { type:"button", style:"secondary", action:{ type:"uri", label:"查看出勤紀錄", uri:urlLogs } },
-          { type:"button", style:"secondary", action:{ type:"uri", label:"查看班表", uri:urlSched } }
-        ]
+    return {
+      type: "flex",
+      altText: `${titleLeft} ${timeStr}`,
+      contents: {
+        type: "bubble",
+        header: {
+          type: "box",
+          layout: "vertical",
+          backgroundColor: "#0F172A",
+          paddingAll: "14px",
+          contents: [
+            { type: "text", text: "H.R燈藝｜員工打卡", size: "sm", weight: "bold", color: "#F5D34D" }
+          ]
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          paddingAll: "16px",
+          spacing: "md",
+          contents: [
+            { type: "text", text: "你已打卡成功", size: "md", weight: "bold", color: "#16A34A" },
+            {
+              type: "box",
+              layout: "horizontal",
+              contents: [
+                { type: "text", text: titleLeft, size: "lg", weight: "bold", color: "#374151", flex: 5 },
+                { type: "text", text: timeStr, size: "xxl", weight: "bold", color: "#111827", flex: 5, align: "end" }
+              ],
+              alignItems: "baseline"
+            }
+          ]
+        },
+        footer: {
+          type: "box",
+          layout: "vertical",
+          paddingAll: "14px",
+          contents: [
+            {
+              type: "button",
+              style: "primary",
+              action: { type: "uri", label: "打開打卡頁", uri: LIFF_HOME_URL }
+            }
+          ]
+        }
       }
     };
-
-    return { type:"flex", altText:`${titleLeft} ${timeStr}`, contents:bubble };
   }
 
   async function postClock(action){
     const bIn = el('btnIn'), bOut = el('btnOut');
     bIn.disabled = true; bOut.disabled = true;
+
     try{
       if(!profile) throw new Error('尚未登入');
 
@@ -406,13 +315,12 @@
 
       setStatus('ok', '✅ 打卡成功，正在發送 Flex…');
 
-      // ✅ 不用 data.flex，直接用前端組「合法 Flex」
-      const flexMsg = JSON.parse(JSON.stringify(buildPunchFlex(action, data)));
+      const flexMsg = buildSimpleClockFlex(action);
 
       try{
         await liff.sendMessages([flexMsg]);
       }catch(e){
-        setStatus('warn', '打卡成功，但 Flex 發送失敗：' + fmtErr(e) + '\n（若仍是 400，代表 LINE 仍判定訊息格式不合法或權限問題）');
+        setStatus('warn', '打卡成功，但 Flex 發送失敗：' + fmtErr(e));
         showCloseBtn();
         return;
       }
@@ -517,21 +425,21 @@
       btnPrev.addEventListener('click', ()=> changeMonth(-1));
       btnNext.addEventListener('click', ()=> changeMonth(1));
 
-      // ✅ 先套用 deep link，再決定要不要抓定位（看班表不需要 GPS）
-      const desired = applyLiffState();
-      if(desired === 'clock'){
-        setStatus('', '正在取得定位…');
-        await getGps();
-      }else{
-        setStatus('ok', '已切換到班表頁（打卡才需要定位）。');
-        loadSchedule(currentMonth);
-      }
+      // 進來先抓定位
+      setStatus('', '正在取得定位…');
+      await getGps();
+
+      // 預設仍在打卡頁
+      setTab('clock');
 
     }catch(err){
       setStatus('bad','初始化失敗：' + (err && err.message ? err.message : err));
       showCloseBtn();
     }
   }
+
+  btnPrev.addEventListener('click', ()=> changeMonth(-1));
+  btnNext.addEventListener('click', ()=> changeMonth(1));
 
   init();
 </script>
