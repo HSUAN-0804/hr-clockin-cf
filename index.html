@@ -205,12 +205,14 @@
       uidText.textContent = profile.userId || '--';
       btnCopyId.style.display = profile.userId ? 'block' : 'none';
 
-      setStatus('', '正在取得定位…');
-      await getGps();
-
+      // 月份/按鈕先綁定（不依賴 GPS）
       monthLabel.textContent = currentMonth;
       btnPrev.addEventListener('click', ()=> changeMonth(-1));
       btnNext.addEventListener('click', ()=> changeMonth(1));
+
+      // 只要進來就取定位（你原本就是這樣）
+      setStatus('', '正在取得定位…');
+      await getGps();
 
     }catch(err){
       setStatus('bad','初始化失敗：' + (err && err.message ? err.message : err));
@@ -219,7 +221,7 @@
   }
 
   function getGps(){
-    return new Promise((resolve,reject)=>{
+    return new Promise((resolve)=>{
       navigator.geolocation.getCurrentPosition(
         pos=>{
           lastPos=pos;
@@ -232,7 +234,7 @@
           pillGps.textContent='定位失敗';
           setStatus('bad','定位失敗：請允許定位權限後再試一次。');
           showCloseBtn();
-          reject(new Error('gps fail'));
+          resolve(null);
         },
         { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
       );
@@ -242,7 +244,15 @@
   async function postClock(action){
     try{
       if(!profile) throw new Error('尚未登入');
-      if(!lastPos) await getGps();
+
+      if(!lastPos){
+        await getGps();
+        if(!lastPos){
+          setStatus('bad','定位未取得，請允許定位後再打卡。');
+          showCloseBtn();
+          return;
+        }
+      }
 
       setStatus('', '送出打卡中…');
 
@@ -266,16 +276,15 @@
       if(data.ok){
         setStatus('ok', `✅ 打卡成功（${data.status || 'OK'}）`);
 
-        // ✅ 員工端發 Flex（不扣 OA 則數）
+        // ✅ 回到「原本可用」：只送 GAS 回來的 data.flex
         try{
           if(data.flex && window.liff && typeof liff.sendMessages === 'function'){
-await liff.sendMessages([{ type: "text", text: "打卡測試：文字訊息" }]);
+            await liff.sendMessages([data.flex]);
           }
         }catch(e){
           // 送失敗也不影響打卡本體
         }
 
-        // ✅ 發完再關閉
         try{
           if(window.liff && typeof liff.closeWindow === 'function'){
             liff.closeWindow();
