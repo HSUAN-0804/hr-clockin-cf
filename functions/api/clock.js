@@ -5,6 +5,7 @@ export async function onRequestPost({ request, env }) {
   const body = await request.json().catch(() => null);
   if (!body) return json({ ok:false, code:"BAD_JSON", message:"請求格式錯誤" }, 400);
 
+  // 轉發到 GAS
   const res = await fetch(GAS_WEBAPP_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -14,79 +15,71 @@ export async function onRequestPost({ request, env }) {
   const text = await res.text();
   let out;
   try { out = JSON.parse(text); }
-  catch { out = { ok:false, code:"BAD_GAS_RESPONSE", message:"GAS 回應非 JSON", raw_head: text.slice(0,500) }; }
+  catch {
+    out = { ok:false, code:"BAD_GAS_RESPONSE", message:"GAS 回應非 JSON", raw_head: text.slice(0,500) };
+  }
 
-  // ✅ 成功就生成「新版 Flex」（不依賴 GAS 產 flex）
+  // ✅ 成功就補上新版 Flex（不依賴 GAS 是否回 flex）
   if (out && out.ok) {
     const liffId = String(body.liffId || env.LIFF_ID || "2008810311-jmqyUaTN").trim();
-    if (liffId) {
-      out.flex = buildFlexMessage({ liffId, body, out, env });
-    }
+    out.flex = buildPunchFlex({ liffId, body, out });
   }
 
   return json(out, 200);
 }
 
-function json(obj, status=200){
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-    }
-  });
-}
-
 export async function onRequestOptions() {
   return new Response(null, {
     status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-    }
+    headers: corsHeaders(),
   });
 }
 
-/* ================= Flex Builder ================= */
+function json(obj, status=200){
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { "Content-Type": "application/json; charset=utf-8", ...corsHeaders() }
+  });
+}
 
-function buildFlexMessage({ liffId, body, out, env }) {
+function corsHeaders(){
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+}
+
+/* ================= Flex Builder（新版外觀＋LIFF深連結按鈕） ================= */
+
+function buildPunchFlex({ liffId, body, out }) {
   const action = String(body.action || out.action || "").toUpperCase() === "OUT" ? "OUT" : "IN";
 
   const dt = pickDate(out) || new Date();
-  const dateStr = fmtDateTW(dt);     // YYYY/MM/DD
-  const timeStr = fmtTimeTW(dt);     // HH:mm
+  const dateStr = fmtDateTW(dt);  // YYYY/MM/DD
+  const timeStr = fmtTimeTW(dt);  // HH:mm
 
-  const locationName = String(out.locationName || out.location_name || env.LOCATION_NAME || "H.R燈藝");
-  const displayName = String(
-    out.employee?.display_name || out.employee?.name || out.name || out.displayName || body.displayName || ""
-  ).trim();
+  const locationName = String(out.locationName || out.location_name || "H.R燈藝");
 
-  const lateMins = toNum(
-    out.mins_late ?? out.late_mins ?? out.lateMins ?? out.lateMinutes ?? out.late?.minsLate ?? 0
-  );
+  // 距離/圍欄（兼容多種回傳）
+  const distanceM = toNum(out.distance_m ?? out.distanceM ?? out.fence?.distanceM ?? out.fence?.distance_m ?? null);
+  const fenceM    = toNum(out.fence_m    ?? out.fenceM    ?? out.fence?.fenceM    ?? out.fence?.fence_m    ?? null);
+  const showFence = Number.isFinite(distanceM) && Number.isFinite(fenceM);
 
-  const distanceM = toNum(
-    out.distance_m ?? out.distanceM ?? out.fence?.distanceM ?? out.fence?.distance_m ?? null
-  );
-  const fenceM = toNum(
-    out.fence_m ?? out.fenceM ?? out.fence?.fenceM ?? out.fence?.fence_m ?? null
-  );
+  // 遲到（兼容：shift.minsLate / mins_late / late_mins）
+  const lateMins = toNum(out.mins_late ?? out.late_mins ?? out.lateMins ?? out.shift?.minsLate ?? out.shift?.lateMins ?? 0);
+  const showLate = Number.isFinite(lateMins) && lateMins > 0;
 
+  // 備註（空白就隱藏）
   const note = String(body.note || out.note || "").trim();
+  const showNote = note.length > 0;
 
+  const empName = String(out.employee?.display_name || out.employee?.name || out.name || "").trim();
+
+  // ✅ 按鈕全部導到「正確 LIFF 入口」＋ liff.state
   const urlClock = `https://liff.line.me/${liffId}?liff.state=${encodeURIComponent("clock")}`;
   const urlLogs  = `https://liff.line.me/${liffId}?liff.state=${encodeURIComponent("/logs")}`;
   const urlSched = `https://liff.line.me/${liffId}?liff.state=${encodeURIComponent("schedule")}`;
-
-  const titleLeft = (action === "IN") ? "上班打卡" : "下班打卡";
-  const okTitle = "你已打卡成功";
-
-  const showFence = Number.isFinite(distanceM) && Number.isFinite(fenceM);
-  const showLate  = Number.isFinite(lateMins) && lateMins > 0;
-  const showNote  = note.length > 0;
 
   const kvRow = (label, value, valueColor) => ({
     type: "box",
@@ -109,15 +102,14 @@ function buildFlexMessage({ liffId, body, out, env }) {
     contents: [{ type: "text", text, size: "xs", weight: "bold", color }]
   });
 
-  const headerBg = "#0F172A";
-  const headerGold = "#F5D34D";
+  const titleLeft = (action === "IN") ? "上班打卡" : "下班打卡";
 
-  const bodyContents = [
+  const contents = [
     {
       type: "box",
       layout: "horizontal",
       contents: [
-        { type: "text", text: okTitle, size: "md", weight: "bold", color: "#065F46", flex: 6 },
+        { type: "text", text: "你已打卡成功", size: "md", weight: "bold", color: "#065F46", flex: 6 },
         chip(action, action === "IN" ? "#DCFCE7" : "#E5E7EB", action === "IN" ? "#166534" : "#111827")
       ],
       alignItems: "center"
@@ -142,31 +134,28 @@ function buildFlexMessage({ liffId, body, out, env }) {
       ]
     },
     { type: "separator", margin: "lg", color: "#E5E7EB" },
+
     kvRow("打卡地點", locationName),
 
-    ...(showFence ? [
-      kvRow("距離店面", `${Math.round(distanceM)}m / ${Math.round(fenceM)}m`, (distanceM <= fenceM ? "#166534" : "#B91C1C"))
-    ] : []),
+    ...(showFence
+      ? [kvRow("距離店面", `${Math.round(distanceM)}m / ${Math.round(fenceM)}m`, (distanceM <= fenceM ? "#166534" : "#B91C1C"))]
+      : []),
 
-    ...(showLate ? [{
-      type: "box",
-      layout: "horizontal",
-      spacing: "sm",
-      contents: [
-        { type: "text", text: "異常紀錄", size: "sm", color: "#6B7280", flex: 3 },
-        {
+    ...(showLate
+      ? [{
           type: "box",
           layout: "horizontal",
-          flex: 7,
-          contents: [{ type: "filler" }, chip(`遲到 ${lateMins} 分鐘`, "#FEE2E2", "#B91C1C")]
-        }
-      ],
-      alignItems: "center"
-    }] : [kvRow("異常紀錄", "無", "#166534")]),
+          spacing: "sm",
+          contents: [
+            { type: "text", text: "異常紀錄", size: "sm", color: "#6B7280", flex: 3 },
+            { type: "box", layout: "horizontal", flex: 7, contents: [{ type: "filler" }, chip(`遲到 ${lateMins} 分鐘`, "#FEE2E2", "#B91C1C")] }
+          ],
+          alignItems: "center"
+        }]
+      : [kvRow("異常紀錄", "無", "#166534")]),
 
     ...(showNote ? [kvRow("事由備註", note)] : []),
-
-    ...(displayName ? [kvRow("打卡人員", displayName)] : []),
+    ...(empName ? [kvRow("打卡人員", empName)] : []),
 
     { type: "separator", margin: "lg", color: "#E5E7EB" }
   ];
@@ -177,10 +166,10 @@ function buildFlexMessage({ liffId, body, out, env }) {
     header: {
       type: "box",
       layout: "vertical",
-      backgroundColor: headerBg,
+      backgroundColor: "#0F172A",
       paddingAll: "14px",
       contents: [
-        { type: "text", text: "H.R燈藝｜員工打卡", size: "sm", weight: "bold", color: headerGold }
+        { type: "text", text: "H.R燈藝｜員工打卡", size: "sm", weight: "bold", color: "#F5D34D" }
       ]
     },
     body: {
@@ -188,7 +177,7 @@ function buildFlexMessage({ liffId, body, out, env }) {
       layout: "vertical",
       paddingAll: "16px",
       spacing: "md",
-      contents: bodyContents
+      contents
     },
     footer: {
       type: "box",
@@ -203,11 +192,7 @@ function buildFlexMessage({ liffId, body, out, env }) {
     }
   };
 
-  return {
-    type: "flex",
-    altText: `${titleLeft} ${timeStr}`,
-    contents: bubble
-  };
+  return { type: "flex", altText: `${titleLeft} ${timeStr}`, contents: bubble };
 }
 
 function toNum(v){
