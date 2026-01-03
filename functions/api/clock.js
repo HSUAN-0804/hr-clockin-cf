@@ -1,360 +1,43 @@
-<!doctype html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-  <title>H.R燈藝｜員工打卡</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <style>
-    :root{
-      --bg:#0b0c10;--text:#f5f5f7;--muted:#b7bbc3;--border:rgba(255,255,255,.08);
-      --radius:18px;--gold:rgba(255,215,0,.75);
-    }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
-      background:radial-gradient(1200px 800px at 50% -20%, rgba(255,215,0,.10), transparent 50%),
-                 radial-gradient(900px 600px at 0% 0%, rgba(59,130,246,.10), transparent 55%),
-                 var(--bg);color:var(--text)}
-    .wrap{max-width:640px;margin:0 auto;padding:18px 14px 28px}
-    .brand{font-weight:800;letter-spacing:.5px;font-size:14px;color:var(--gold)}
-    .title{margin:6px 0 12px;font-size:26px;font-weight:900}
-    .tabs{display:flex;gap:10px;margin:10px 0 12px}
-    .tab{flex:1;border:1px solid var(--border);background:rgba(255,255,255,.04);color:rgba(255,255,255,.85);
-      padding:10px 12px;border-radius:14px;font-weight:900;text-align:center;cursor:pointer;user-select:none}
-    .tab.active{border-color:rgba(255,215,0,.25);background:rgba(255,215,0,.10);color:#fff}
-    .card{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 16px 42px rgba(0,0,0,.35)}
-    .row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;border:1px solid var(--border);
-      background:rgba(0,0,0,.25);color:var(--muted);font-size:13px}
-    .clock{font-size:44px;font-weight:900;letter-spacing:1px;margin:10px 0 8px}
-    .sub{color:var(--muted);font-size:13px;line-height:1.4}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
-    button{width:100%;border:none;border-radius:16px;padding:14px 14px;font-size:18px;font-weight:900;color:var(--text);
-      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));border:1px solid var(--border);cursor:pointer}
-    button:active{transform:scale(.99)}
-    .status{margin-top:12px;padding:12px 12px;border-radius:14px;border:1px solid var(--border);
-      background:rgba(0,0,0,.22);font-size:14px;line-height:1.4;color:var(--muted)}
-    .status.ok{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95)}
-    .status.bad{border-color:rgba(239,68,68,.38);color:rgba(254,226,226,.95)}
-    .status.warn{border-color:rgba(245,158,11,.35);color:rgba(255,237,213,.95)}
-    .kv{display:grid;grid-template-columns:110px 1fr;gap:8px;margin-top:10px}
-    .kv div{font-size:13px;color:var(--muted)}
-    .kv b{color:var(--text);font-weight:800;word-break:break-all}
-    .mini{margin-top:12px;color:rgba(255,255,255,.55);font-size:12px}
-    .softbtn{margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
-      background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.25);color:rgba(255,255,255,.92);
-      cursor:pointer;display:none}
-    .closebtn{margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
-      background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.96);
-      cursor:pointer;display:none}
-    .hidden{display:none}
-    /* schedule */
-    .scheduleTop{display:flex;gap:10px;align-items:center;margin:8px 0 12px}
-    .monthBox{flex:1;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.04);
-      padding:10px 12px;color:#fff;font-weight:900;display:flex;justify-content:space-between;align-items:center}
-    .monthBtn{flex:0 0 auto;padding:10px 12px;border-radius:14px;font-weight:900}
-    .list{margin-top:10px;display:flex;flex-direction:column;gap:10px}
-    .item{border:1px solid var(--border);border-radius:14px;padding:12px;background:rgba(0,0,0,.22);
-      display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-    .item .d{font-weight:900}
-    .badge{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
-    .badge.work{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95)}
-    .badge.off{border-color:rgba(239,68,68,.35);color:rgba(254,226,226,.95)}
-    .seg{color:#fff;font-weight:800}
-    .note{color:rgba(255,255,255,.60);font-size:12px;margin-top:4px}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="brand">員工專用</div>
-    <div class="title">H.R燈藝｜打卡</div>
+export async function onRequestPost({ request, env }) {
+  const GAS_WEBAPP_URL = (env.GAS_WEBAPP_URL || "").trim();
+  if (!GAS_WEBAPP_URL) return json({ ok:false, code:"NO_GAS_URL", message:"未設定 GAS_WEBAPP_URL" }, 500);
 
-    <div class="tabs">
-      <div class="tab active" id="tabClock">打卡</div>
-      <div class="tab" id="tabSchedule">本月班表</div>
-    </div>
+  const body = await request.json().catch(() => null);
+  if (!body) return json({ ok:false, code:"BAD_JSON", message:"請求格式錯誤" }, 400);
 
-    <div class="card" id="panelClock">
-      <div class="row">
-        <div class="pill" id="pillLogin">尚未登入</div>
-        <div class="pill" id="pillGps">定位未取得</div>
-      </div>
-
-      <div class="clock" id="clock">--:--</div>
-      <div class="sub" id="hello">請稍候…</div>
-
-      <div class="kv">
-        <div>距離店面</div><div><b id="distText">--</b></div>
-        <div>我的LINE ID</div><div><b id="uidText">--</b></div>
-        <div>LIFF環境</div><div><b id="clientText">--</b></div>
-      </div>
-
-      <button class="softbtn" id="btnCopyId">一鍵複製我的LINE ID</button>
-      <button class="closebtn" id="btnClose">關閉視窗（返回LINE）</button>
-
-      <div class="grid">
-        <button id="btnIn">上班打卡</button>
-        <button id="btnOut">下班打卡</button>
-      </div>
-
-      <div class="status" id="statusBox">準備中…</div>
-      <div class="mini">打卡成功會由「員工端」送出 Flex（不扣官方帳號則數）。</div>
-    </div>
-
-    <div class="card hidden" id="panelSchedule">
-      <div class="scheduleTop">
-        <div class="monthBox">
-          <span>月份</span>
-          <span id="monthLabel">----</span>
-        </div>
-        <button class="monthBtn" id="btnPrev">上月</button>
-        <button class="monthBtn" id="btnNext">下月</button>
-      </div>
-
-      <div class="status" id="scheduleStatus">尚未載入…</div>
-      <div class="list" id="scheduleList"></div>
-      <div class="mini">班表來源：shift_overrides ＞ shift_month（PT）＞ shift_templates（FT）。</div>
-    </div>
-  </div>
-
-<script>
-  const LIFF_ID = "2008810311-jmqyUaTN";
-
-  const el = (id)=>document.getElementById(id);
-  const tabClock = el('tabClock'), tabSchedule = el('tabSchedule');
-  const panelClock = el('panelClock'), panelSchedule = el('panelSchedule');
-
-  const pillLogin = el('pillLogin');
-  const pillGps = el('pillGps');
-  const helloEl = el('hello');
-  const statusBox = el('statusBox');
-  const distText = el('distText');
-  const uidText = el('uidText');
-  const clientText = el('clientText');
-  const btnCopyId = el('btnCopyId');
-  const btnClose = el('btnClose');
-  const clockEl = el('clock');
-
-  const monthLabel = el('monthLabel');
-  const btnPrev = el('btnPrev');
-  const btnNext = el('btnNext');
-  const scheduleStatus = el('scheduleStatus');
-  const scheduleList = el('scheduleList');
-
-  let profile = null;
-  let lastPos = null;
-
-  let currentMonth = (() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-  })();
-
-  function setTab(which){
-    if(which==='clock'){
-      tabClock.classList.add('active'); tabSchedule.classList.remove('active');
-      panelClock.classList.remove('hidden'); panelSchedule.classList.add('hidden');
-    }else{
-      tabSchedule.classList.add('active'); tabClock.classList.remove('active');
-      panelSchedule.classList.remove('hidden'); panelClock.classList.add('hidden');
-      if(profile && profile.userId) loadSchedule(currentMonth);
-    }
-  }
-  tabClock.addEventListener('click', ()=>setTab('clock'));
-  tabSchedule.addEventListener('click', ()=>setTab('schedule'));
-
-  function setStatus(type, text){
-    statusBox.className = 'status ' + (type || '');
-    statusBox.textContent = text;
-  }
-  function setScheduleStatus(type, text){
-    scheduleStatus.className = 'status ' + (type || '');
-    scheduleStatus.textContent = text;
-  }
-  function showCloseBtn(){ btnClose.style.display = 'block'; }
-  btnClose.addEventListener('click', ()=>{ try{ liff.closeWindow(); }catch(e){} });
-
-  function tickClock(){
-    const d = new Date();
-    clockEl.textContent = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-  }
-  setInterval(tickClock, 1000); tickClock();
-
-  async function init(){
-    try{
-      await liff.init({ liffId: LIFF_ID });
-
-      try{
-        clientText.textContent = (liff.isInClient && liff.isInClient()) ? 'LINE內（可關閉）' : '非LINE內（不可自動關閉）';
-      }catch(e){ clientText.textContent='未知'; }
-
-      if(!liff.isLoggedIn()){
-        pillLogin.textContent='未登入';
-        if(!liff.isInClient || !liff.isInClient()){
-          setStatus('warn','請用 LINE 內開啟此頁面（LIFF）。');
-          showCloseBtn();
-          return;
-        }
-        setStatus('warn','請先登入 LINE 才能打卡。');
-        liff.login(); return;
-      }
-
-      profile = await liff.getProfile();
-      pillLogin.textContent='已登入';
-      helloEl.textContent = `嗨 ${profile.displayName}，請先取得定位後再打卡。`;
-      uidText.textContent = profile.userId || '--';
-      btnCopyId.style.display = profile.userId ? 'block' : 'none';
-
-      setStatus('', '正在取得定位…');
-      await getGps();
-
-      monthLabel.textContent = currentMonth;
-      btnPrev.addEventListener('click', ()=> changeMonth(-1));
-      btnNext.addEventListener('click', ()=> changeMonth(1));
-
-    }catch(err){
-      setStatus('bad','初始化失敗：' + (err && err.message ? err.message : err));
-      showCloseBtn();
-    }
-  }
-
-  function getGps(){
-    return new Promise((resolve,reject)=>{
-      navigator.geolocation.getCurrentPosition(
-        pos=>{
-          lastPos=pos;
-          pillGps.textContent='定位已取得';
-          distText.textContent='已取得（由後端判斷圍欄）';
-          setStatus('ok','定位成功，可以打卡。');
-          resolve(pos);
-        },
-        ()=>{
-          pillGps.textContent='定位失敗';
-          setStatus('bad','定位失敗：請允許定位權限後再試一次。');
-          showCloseBtn();
-          reject(new Error('gps fail'));
-        },
-        { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
-      );
-    });
-  }
-
-  async function postClock(action){
-    try{
-      if(!profile) throw new Error('尚未登入');
-      if(!lastPos) await getGps();
-
-      setStatus('', '送出打卡中…');
-
-      const payload = {
-        action,
-        userId: profile.userId,
-        lat: lastPos.coords.latitude,
-        lng: lastPos.coords.longitude,
-        device: navigator.userAgent || '',
-        note: ''
-      };
-
-      const resp = await fetch('/api/clock', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(payload)
-      });
-
-      const data = await resp.json();
-
-      if(data.ok){
-        setStatus('ok', `✅ 打卡成功（${data.status || 'OK'}）`);
-
-        // ✅ 員工端發 Flex（不扣 OA 則數）
-        try{
-          if(data.flex && window.liff && typeof liff.sendMessages === 'function'){
-            await liff.sendMessages([data.flex]);
-          }
-        }catch(e){
-          // 送失敗也不影響打卡本體
-        }
-
-        // ✅ 發完再關閉
-        try{
-          if(window.liff && typeof liff.closeWindow === 'function'){
-            liff.closeWindow();
-            return;
-          }
-        }catch(e){}
-
-        showCloseBtn();
-        return;
-      }
-
-      setStatus('bad', data.message || '打卡失敗');
-      showCloseBtn();
-    }catch(err){
-      setStatus('bad','送出失敗：' + (err && err.message ? err.message : err));
-      showCloseBtn();
-    }
-  }
-
-  el('btnIn').addEventListener('click', ()=>postClock('IN'));
-  el('btnOut').addEventListener('click', ()=>postClock('OUT'));
-
-  btnCopyId.addEventListener('click', async ()=>{
-    try{
-      await navigator.clipboard.writeText(profile.userId);
-      setStatus('ok','✅ 已複製 LINE ID，請貼到 Sheets employees');
-    }catch(e){}
+  const res = await fetch(GAS_WEBAPP_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
 
-  function changeMonth(delta){
-    const [y,m] = currentMonth.split('-').map(Number);
-    const d = new Date(y, m-1 + delta, 1);
-    currentMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    monthLabel.textContent = currentMonth;
-    if(profile && profile.userId) loadSchedule(currentMonth);
-  }
-  function fmtSegs(segs){
-    if(!segs || !segs.length) return '—';
-    return segs.map(s=>`${s.start}-${s.end}`).join(' / ');
-  }
-  async function loadSchedule(month){
-    try{
-      setScheduleStatus('', '載入班表中…');
-      scheduleList.innerHTML = '';
-      const resp = await fetch('/api/schedule', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ userId: profile.userId, month })
-      });
-      const data = await resp.json();
-      if(!data.ok){
-        setScheduleStatus('bad', data.message || '班表讀取失敗');
-        return;
-      }
-      setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
-      const items = data.items || [];
-      for(const it of items){
-        const badgeCls = (it.type === 'WORK') ? 'badge work' : 'badge off';
-        const badgeTxt = (it.type === 'WORK') ? '上班' : (it.type === 'LEAVE' ? '請假' : '休');
-        const segTxt = fmtSegs(it.segments);
-        const div = document.createElement('div');
-        div.className='item';
-        div.innerHTML = `
-          <div>
-            <div class="d">${it.date}</div>
-            <div class="seg">${segTxt}</div>
-            ${it.note ? `<div class="note">${it.note}</div>` : ``}
-          </div>
-          <div class="${badgeCls}">${badgeTxt}</div>
-        `;
-        scheduleList.appendChild(div);
-      }
-      if(items.length===0) setScheduleStatus('warn', '這個月沒有班表資料（或你尚未同步排班）');
-    }catch(err){
-      setScheduleStatus('bad', '班表載入失敗：' + (err && err.message ? err.message : err));
-    }
-  }
+  const text = await res.text();
+  let out;
+  try { out = JSON.parse(text); }
+  catch { out = { ok:false, code:"BAD_GAS_RESPONSE", message:"GAS 回應非 JSON", raw_head: text.slice(0,500) }; }
 
-  init();
-</script>
-</body>
-</html>
+  return json(out, 200);
+}
+
+function json(obj, status=200){
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+    }
+  });
+}
+
+export async function onRequestOptions() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+    }
+  });
+}
