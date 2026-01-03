@@ -163,6 +163,31 @@
   tabClock.addEventListener('click', ()=>setTab('clock'));
   tabSchedule.addEventListener('click', ()=>setTab('schedule'));
 
+  // ✅ 讀取 liff.state，支援：clock / schedule / /logs
+  function applyLiffState(){
+    const sp = new URLSearchParams(location.search);
+    const state = sp.get('liff.state');
+    if(!state){ setTab('clock'); return 'clock'; }
+
+    const s = String(state).trim();
+
+    // 若是 /logs 這種「路徑型」deep link：跳到同網域路徑（安全白名單）
+    if(s.startsWith('/')){
+      if(/^\/[a-zA-Z0-9/_-]*$/.test(s) && location.pathname !== s){
+        location.replace(s + location.search);
+      }
+      return 'clock';
+    }
+
+    const k = s.toLowerCase();
+    if(k === 'schedule' || k === 'shift'){
+      setTab('schedule');
+      return 'schedule';
+    }
+    setTab('clock');
+    return 'clock';
+  }
+
   function setStatus(type, text){
     statusBox.className = 'status ' + (type || '');
     statusBox.textContent = text;
@@ -205,12 +230,21 @@
       uidText.textContent = profile.userId || '--';
       btnCopyId.style.display = profile.userId ? 'block' : 'none';
 
-      setStatus('', '正在取得定位…');
-      await getGps();
+      // ✅ 先套用 deep link（避免「查看班表」被 GPS 卡住）
+      const desiredTab = applyLiffState();
 
+      // 月份/按鈕先綁定（不依賴 GPS）
       monthLabel.textContent = currentMonth;
       btnPrev.addEventListener('click', ()=> changeMonth(-1));
       btnNext.addEventListener('click', ()=> changeMonth(1));
+
+      // ✅ 只有在「打卡頁」才主動取 GPS（失敗也不炸掉 init）
+      if(desiredTab === 'clock'){
+        setStatus('', '正在取得定位…');
+        await getGps(); // 失敗會回 null，不會 throw
+      }else{
+        setStatus('ok', '已切換到班表頁（打卡才需要定位）。');
+      }
 
     }catch(err){
       setStatus('bad','初始化失敗：' + (err && err.message ? err.message : err));
@@ -219,7 +253,7 @@
   }
 
   function getGps(){
-    return new Promise((resolve,reject)=>{
+    return new Promise((resolve)=>{
       navigator.geolocation.getCurrentPosition(
         pos=>{
           lastPos=pos;
@@ -229,10 +263,12 @@
           resolve(pos);
         },
         ()=>{
+          // ✅ 不 reject，避免整個 init 爆掉
           pillGps.textContent='定位失敗';
+          distText.textContent='未取得';
           setStatus('bad','定位失敗：請允許定位權限後再試一次。');
           showCloseBtn();
-          reject(new Error('gps fail'));
+          resolve(null);
         },
         { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
       );
@@ -242,7 +278,15 @@
   async function postClock(action){
     try{
       if(!profile) throw new Error('尚未登入');
-      if(!lastPos) await getGps();
+
+      if(!lastPos){
+        await getGps();
+        if(!lastPos){
+          setStatus('bad','定位未取得，請允許定位後再打卡。');
+          showCloseBtn();
+          return;
+        }
+      }
 
       setStatus('', '送出打卡中…');
 
@@ -252,7 +296,8 @@
         lat: lastPos.coords.latitude,
         lng: lastPos.coords.longitude,
         device: navigator.userAgent || '',
-        note: ''
+        note: '',
+        liffId: LIFF_ID  // ✅ 讓 /api/clock 生成正確 LIFF deep link
       };
 
       const resp = await fetch('/api/clock', {
@@ -271,9 +316,7 @@
           if(data.flex && window.liff && typeof liff.sendMessages === 'function'){
             await liff.sendMessages([data.flex]);
           }
-        }catch(e){
-          // 送失敗也不影響打卡本體
-        }
+        }catch(e){}
 
         // ✅ 發完再關閉
         try{
