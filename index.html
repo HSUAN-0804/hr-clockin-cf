@@ -151,6 +151,9 @@
   let lastPos = null;
   let currentState = 'UNKNOWN'; // EMPTY / OFF / IN / UNKNOWN
 
+  // 初始 UI
+  setStateUI('UNKNOWN');
+
   let currentMonth = (() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
@@ -253,8 +256,14 @@
       uidText.textContent = profile.userId || '--';
       btnCopyId.style.display = profile.userId ? 'block' : 'none';
 
+      // ✅ 先查一次狀態，立即鎖定 IN/OUT 按鈕
+      await refreshState();
       setStatus('', '正在取得定位…');
-      await getGps();
+      // ✅ 定位不阻塞畫面（避免一直卡讀取中）
+      getGps().then(()=>{
+        if(lastPos) setStatus('ok', '定位成功，' + stateHintText());
+        else setStatus('warn', '定位未取得：仍可查看狀態，但打卡需允許定位。');
+      });
 
       monthLabel.textContent = currentMonth;
       btnPrev.addEventListener('click', ()=> changeMonth(-1));
@@ -267,20 +276,19 @@
   }
 
   function getGps(){
-    return new Promise((resolve,reject)=>{
+    return new Promise((resolve)=>{
       navigator.geolocation.getCurrentPosition(
         pos=>{
           lastPos=pos;
           pillGps.textContent='定位已取得';
           distText.textContent='已取得（由後端判斷圍欄）';
-          setStatus('ok', '定位成功，' + stateHintText());
           resolve(pos);
         },
-        ()=>{
+        err=>{
+          lastPos=null;
           pillGps.textContent='定位失敗';
-          setStatus('bad','定位失敗：請允許定位權限後再試一次。');
-          showCloseBtn();
-          reject(new Error('gps fail'));
+          distText.textContent='未取得';
+          resolve(null);
         },
         { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
       );
@@ -290,6 +298,9 @@
   async function postClock(action){
     try{
       if(!profile) throw new Error('尚未登入');
+
+      // ✅ 先抓一次狀態（避免前端狀態過期）
+      await refreshState();
 
       const act = String(action||'').toUpperCase();
 
@@ -359,7 +370,6 @@
       // 依狀態解鎖按鈕
       setStateUI(currentState);
     }
-  }
   }
 
   btnIn.addEventListener('click', ()=>postClock('IN'));
