@@ -5,60 +5,91 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>H.R燈藝｜員工打卡</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-
   <style>
     :root{
       --bg:#0b0c10;--text:#f5f5f7;--muted:#b7bbc3;--border:rgba(255,255,255,.08);
       --radius:18px;--gold:rgba(255,215,0,.75);
     }
     *{box-sizing:border-box}
-    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
-      background:radial-gradient(1200px 800px at 50% -20%, rgba(255,215,0,.10), transparent 50%),
-                 radial-gradient(900px 600px at 0% 0%, rgba(59,130,246,.10), transparent 55%),
-                 var(--bg);color:var(--text)}
+    body{
+      margin:0;
+      font-family:ui-sans-serif,system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+      background:
+        radial-gradient(1200px 800px at 50% -20%, rgba(255,215,0,.10), transparent 50%),
+        radial-gradient(900px 600px at 0% 0%, rgba(59,130,246,.10), transparent 55%),
+        var(--bg);
+      color:var(--text)
+    }
     .wrap{max-width:640px;margin:0 auto;padding:18px 14px 28px}
     .brand{font-weight:800;letter-spacing:.5px;font-size:14px;color:var(--gold)}
     .title{margin:6px 0 12px;font-size:26px;font-weight:900}
     .tabs{display:flex;gap:10px;margin:10px 0 12px}
-    .tab{flex:1;border:1px solid var(--border);background:rgba(255,255,255,.04);color:rgba(255,255,255,.85);
-      padding:10px 12px;border-radius:14px;font-weight:900;text-align:center;cursor:pointer;user-select:none}
+    .tab{
+      flex:1;border:1px solid var(--border);background:rgba(255,255,255,.04);color:rgba(255,255,255,.85);
+      padding:10px 12px;border-radius:14px;font-weight:900;text-align:center;cursor:pointer;user-select:none
+    }
     .tab.active{border-color:rgba(255,215,0,.25);background:rgba(255,215,0,.10);color:#fff}
-    .card{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 16px 42px rgba(0,0,0,.35)}
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:16px;
+      box-shadow:0 16px 42px rgba(0,0,0,.35)
+    }
     .row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;border:1px solid var(--border);
-      background:rgba(0,0,0,.25);color:var(--muted);font-size:13px}
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 10px;border-radius:999px;border:1px solid var(--border);
+      background:rgba(0,0,0,.25);color:var(--muted);font-size:13px
+    }
     .clock{font-size:44px;font-weight:900;letter-spacing:1px;margin:10px 0 8px}
     .sub{color:var(--muted);font-size:13px;line-height:1.4}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
-    button{width:100%;border:none;border-radius:16px;padding:14px 14px;font-size:18px;font-weight:900;color:var(--text);
-      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));border:1px solid var(--border);cursor:pointer}
-    button:active{transform:scale(.99)}
-    button[disabled]{opacity:.55;cursor:not-allowed}
-    .status{margin-top:12px;padding:12px 12px;border-radius:14px;border:1px solid var(--border);
-      background:rgba(0,0,0,.22);font-size:14px;line-height:1.4;color:var(--muted);white-space:pre-line}
-    .status.ok{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95)}
-    .status.bad{border-color:rgba(239,68,68,.38);color:rgba(254,226,226,.95)}
-    .status.warn{border-color:rgba(245,158,11,.35);color:rgba(255,237,213,.95)}
     .kv{display:grid;grid-template-columns:110px 1fr;gap:8px;margin-top:10px}
     .kv div{font-size:13px;color:var(--muted)}
     .kv b{color:var(--text);font-weight:800;word-break:break-all}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+    button{
+      width:100%;border:none;border-radius:16px;padding:14px 14px;font-size:18px;font-weight:900;color:var(--text);
+      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      border:1px solid var(--border);
+      cursor:pointer
+    }
+    button:active{transform:scale(.99)}
+    button[disabled]{opacity:.55;cursor:not-allowed}
+    .status{
+      margin-top:12px;padding:12px 12px;border-radius:14px;border:1px solid var(--border);
+      background:rgba(0,0,0,.22);
+      font-size:14px;line-height:1.4;color:var(--muted);
+      white-space:pre-line
+    }
+    .status.ok{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95)}
+    .status.bad{border-color:rgba(239,68,68,.38);color:rgba(254,226,226,.95)}
+    .status.warn{border-color:rgba(245,158,11,.35);color:rgba(255,237,213,.95)}
     .mini{margin-top:12px;color:rgba(255,255,255,.55);font-size:12px}
-    .softbtn{margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
+    .softbtn{
+      margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
       background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.25);color:rgba(255,255,255,.92);
-      cursor:pointer;display:none}
-    .closebtn{margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
+      cursor:pointer;display:none
+    }
+    .closebtn{
+      margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
       background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.96);
-      cursor:pointer;display:none}
+      cursor:pointer;display:none
+    }
     .hidden{display:none}
+
     /* schedule */
     .scheduleTop{display:flex;gap:10px;align-items:center;margin:8px 0 12px}
-    .monthBox{flex:1;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.04);
-      padding:10px 12px;color:#fff;font-weight:900;display:flex;justify-content:space-between;align-items:center}
+    .monthBox{
+      flex:1;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.04);
+      padding:10px 12px;color:#fff;font-weight:900;display:flex;justify-content:space-between;align-items:center
+    }
     .monthBtn{flex:0 0 auto;padding:10px 12px;border-radius:14px;font-weight:900}
     .list{margin-top:10px;display:flex;flex-direction:column;gap:10px}
-    .item{border:1px solid var(--border);border-radius:14px;padding:12px;background:rgba(0,0,0,.22);
-      display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .item{
+      border:1px solid var(--border);border-radius:14px;padding:12px;background:rgba(0,0,0,.22);
+      display:flex;justify-content:space-between;gap:10px;align-items:flex-start
+    }
     .item .d{font-weight:900}
     .badge{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
     .badge.work{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95)}
@@ -97,8 +128,8 @@
       <button class="closebtn" id="btnClose">關閉視窗（返回LINE）</button>
 
       <div class="grid">
-        <button id="btnIn">上班打卡</button>
-        <button id="btnOut">下班打卡</button>
+        <button id="btnIn">IN 上班</button>
+        <button id="btnOut">OUT 下班</button>
       </div>
 
       <div class="status" id="statusBox">準備中…</div>
@@ -122,7 +153,6 @@
   </div>
 
 <script>
-  // ✅ 你的 LIFF ID
   const LIFF_ID = "2008810311-jmqyUaTN";
 
   const el = (id)=>document.getElementById(id);
@@ -167,6 +197,18 @@
   tabClock.addEventListener('click', ()=>setTab('clock'));
   tabSchedule.addEventListener('click', ()=>setTab('schedule'));
 
+  // ✅ Flex 按鈕 deep link：liff.state=clock / schedule
+  function applyLiffState(){
+    const sp = new URLSearchParams(location.search);
+    const s = String(sp.get('liff.state') || '').trim().toLowerCase();
+    if(s === 'schedule' || s === 'shift'){
+      setTab('schedule');
+      return 'schedule';
+    }
+    setTab('clock');
+    return 'clock';
+  }
+
   function setStatus(type, text){
     statusBox.className = 'status ' + (type || '');
     statusBox.textContent = text;
@@ -184,15 +226,7 @@
   }
   setInterval(tickClock, 1000); tickClock();
 
-  // ✅ 讓 Flex 底下按鈕的 liff.state 能自動切到對應 tab
-  function applyLiffState(){
-    const sp = new URLSearchParams(location.search);
-    const s = String(sp.get('liff.state') || '').trim().toLowerCase();
-    if(s === 'schedule' || s === 'shift') { setTab('schedule'); return 'schedule'; }
-    setTab('clock'); return 'clock';
-  }
-
-  // GPS：失敗不 reject（避免整個流程炸掉）
+  // ✅ GPS：失敗不 reject（避免流程整個爆掉）
   function getGps(){
     return new Promise((resolve)=>{
       navigator.geolocation.getCurrentPosition(
@@ -217,21 +251,25 @@
   }
 
   function fmtErr(e){
-    const code = (e && (e.code || e.status)) ? (e.code || e.status) : '';
-    const msg  = e && e.message ? e.message : String(e || '');
-    return (code ? `(code:${code}) ` : '') + msg;
+    const c = (e && (e.code ?? e.status)) ? (e.code ?? e.status) : '';
+    const m = e && e.message ? e.message : String(e || '');
+    return (c ? `CODE:${c} ` : '') + m;
   }
 
-  // ======= ✅ 這裡是核心：前端自己產「合法 Flex」 =======
+  // ✅ 100%合法 Flex（照官方結構：bubble + styles + header/body/footer）
   function fmtDateTW(d){
-    const parts = new Intl.DateTimeFormat("en-CA", { timeZone:"Asia/Taipei", year:"numeric", month:"2-digit", day:"2-digit" }).formatToParts(d);
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone:"Asia/Taipei", year:"numeric", month:"2-digit", day:"2-digit"
+    }).formatToParts(d);
     const y = parts.find(p=>p.type==="year")?.value || "0000";
     const m = parts.find(p=>p.type==="month")?.value || "00";
     const da= parts.find(p=>p.type==="day")?.value || "00";
     return `${y}/${m}/${da}`;
   }
   function fmtTimeTW(d){
-    const parts = new Intl.DateTimeFormat("en-CA", { timeZone:"Asia/Taipei", hour:"2-digit", minute:"2-digit", hour12:false }).formatToParts(d);
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone:"Asia/Taipei", hour:"2-digit", minute:"2-digit", hour12:false
+    }).formatToParts(d);
     const hh = parts.find(p=>p.type==="hour")?.value || "00";
     const mm = parts.find(p=>p.type==="minute")?.value || "00";
     return `${hh}:${mm}`;
@@ -243,77 +281,78 @@
 
   function buildPunchFlex(action, data){
     const now = new Date();
-    const titleLeft = (action === 'OUT') ? '下班打卡' : '上班打卡';
+    const titleLeft = (String(action).toUpperCase() === 'OUT') ? '下班打卡' : '上班打卡';
     const dateStr = fmtDateTW(now);
     const timeStr = fmtTimeTW(now);
 
     const locationName = String(data.locationName || data.location_name || 'H.R燈藝');
 
-    const lateMins = toNum(data.mins_late ?? data.late_mins ?? data.lateMins ?? data.shift?.minsLate ?? 0) || 0;
     const distanceM = toNum(data.distance_m ?? data.distanceM ?? data.fence?.distanceM ?? null);
     const fenceM    = toNum(data.fence_m ?? data.fenceM ?? data.fence?.fenceM ?? null);
+    const lateMins  = toNum(data.mins_late ?? data.late_mins ?? data.lateMins ?? data.shift?.minsLate ?? 0) || 0;
 
     const showFence = (distanceM != null && fenceM != null);
-    const showLate  = lateMins > 0;
 
-    const urlClock = `https://liff.line.me/${LIFF_ID}?liff.state=${encodeURIComponent('clock')}`;
-    const urlLogs  = `https://liff.line.me/${LIFF_ID}?liff.state=${encodeURIComponent('/logs')}`;
-    const urlSched = `https://liff.line.me/${LIFF_ID}?liff.state=${encodeURIComponent('schedule')}`;
+    const urlClock = `https://liff.line.me/${LIFF_ID}?liff.state=clock`;
+    const urlLogs  = `https://liff.line.me/${LIFF_ID}?liff.state=/logs`;
+    const urlSched = `https://liff.line.me/${LIFF_ID}?liff.state=schedule`;
 
     const kv = (k, v, color) => ({
-      type:"box", layout:"horizontal", contents:[
-        { type:"text", text:k, size:"sm", color:"#6B7280", flex:4 },
-        { type:"text", text:String(v), size:"sm", color:(color||"#111827"), flex:6, align:"end", wrap:true }
+      type:"box",
+      layout:"horizontal",
+      contents:[
+        { type:"text", text:k, size:"sm", color:"#6B7280", flex:3 },
+        { type:"text", text:String(v), size:"sm", color:(color||"#111827"), flex:7, align:"end", wrap:true }
       ]
     });
 
-    const chip = (text, bg, color) => ({
-      type:"box", layout:"vertical", backgroundColor:bg, cornerRadius:"xl", paddingAll:"xs",
-      contents:[{ type:"text", text, size:"xs", weight:"bold", color }]
-    });
+    const bodyContents = [
+      { type:"text", text:"你已打卡成功", size:"md", weight:"bold", color:"#16A34A" },
+
+      {
+        type:"box", layout:"horizontal",
+        contents:[
+          { type:"text", text:titleLeft, size:"md", weight:"bold", color:"#111827", flex:5 },
+          { type:"text", text:timeStr, size:"xxl", weight:"bold", color:"#111827", flex:5, align:"end" }
+        ],
+        alignItems:"baseline"
+      },
+
+      kv("日期", dateStr),
+
+      { type:"separator" },
+
+      kv("打卡地點", locationName),
+
+      ...(showFence ? [kv("距離店面", `${Math.round(distanceM)}m / ${Math.round(fenceM)}m`, (distanceM<=fenceM ? "#16A34A" : "#DC2626"))] : []),
+
+      (lateMins > 0 ? kv("異常紀錄", `遲到 ${lateMins} 分鐘`, "#DC2626") : kv("異常紀錄", "無", "#16A34A"))
+    ];
 
     const bubble = {
       type:"bubble",
-      header:{
-        type:"box", layout:"vertical", backgroundColor:"#0F172A", paddingAll:"md",
-        contents:[{ type:"text", text:"H.R燈藝｜員工打卡", size:"sm", weight:"bold", color:"#F5D34D" }]
+      styles:{
+        header:{ backgroundColor:"#0F172A" },
+        body:{ backgroundColor:"#FFFFFF" },
+        footer:{ backgroundColor:"#FFFFFF" }
       },
-      body:{
-        type:"box", layout:"vertical", paddingAll:"md", spacing:"md",
+      header:{
+        type:"box",
+        layout:"vertical",
         contents:[
-          { type:"box", layout:"horizontal", contents:[
-              { type:"text", text:"你已打卡成功", size:"md", weight:"bold", color:"#065F46", flex:1 },
-              chip(action === 'OUT' ? 'OUT' : 'IN', action === 'OUT' ? "#E5E7EB" : "#DCFCE7", action === 'OUT' ? "#111827" : "#166534")
-            ], alignItems:"center"
-          },
-
-          { type:"separator" },
-
-          { type:"box", layout:"horizontal", contents:[
-              { type:"text", text:titleLeft, size:"lg", weight:"bold", color:"#374151", flex:6 },
-              { type:"text", text:timeStr, size:"xxl", weight:"bold", color:"#111827", flex:4, align:"end" }
-            ], alignItems:"baseline"
-          },
-
-          kv("日期", dateStr),
-          { type:"separator" },
-
-          kv("打卡地點", locationName),
-
-          ...(showFence ? [kv("距離店面", `${Math.round(distanceM)}m / ${Math.round(fenceM)}m`, (distanceM<=fenceM ? "#166534" : "#B91C1C"))] : []),
-
-          ...(showLate
-            ? [ { type:"box", layout:"horizontal", contents:[
-                  { type:"text", text:"異常紀錄", size:"sm", color:"#6B7280", flex:4 },
-                  { type:"box", layout:"horizontal", flex:6, contents:[{type:"filler"}, chip(`遲到 ${lateMins} 分鐘`, "#FEE2E2", "#B91C1C")] }
-                ], alignItems:"center"
-              } ]
-            : [ kv("異常紀錄", "無", "#166534") ]
-          )
+          { type:"text", text:"H.R燈藝｜員工打卡", size:"sm", weight:"bold", color:"#F5D34D" }
         ]
       },
+      body:{
+        type:"box",
+        layout:"vertical",
+        spacing:"md",
+        contents: bodyContents
+      },
       footer:{
-        type:"box", layout:"vertical", paddingAll:"md", spacing:"sm",
+        type:"box",
+        layout:"vertical",
+        spacing:"sm",
         contents:[
           { type:"button", style:"primary", action:{ type:"uri", label:"開啟打卡頁面", uri:urlClock } },
           { type:"button", style:"secondary", action:{ type:"uri", label:"查看出勤紀錄", uri:urlLogs } },
@@ -326,8 +365,11 @@
   }
 
   async function postClock(action){
+    const bIn = el('btnIn'), bOut = el('btnOut');
+    bIn.disabled = true; bOut.disabled = true;
     try{
       if(!profile) throw new Error('尚未登入');
+
       if(!lastPos) await getGps();
       if(!lastPos){
         setStatus('bad','定位未取得，請允許定位後再打卡。');
@@ -345,7 +387,7 @@
         accuracy: lastPos.coords.accuracy,
         device: navigator.userAgent || '',
         note: '',
-        liffId: LIFF_ID // ✅ 一併給後端（可用可不用）
+        liffId: LIFF_ID
       };
 
       const resp = await fetch('/api/clock', {
@@ -362,26 +404,28 @@
         return;
       }
 
-      setStatus('ok', '✅ 打卡成功');
+      setStatus('ok', '✅ 打卡成功，正在發送 Flex…');
 
-      // ✅ 直接用「前端產生的合法 Flex」送出（不再用 data.flex）
-      const flexMsg = buildPunchFlex(action, data);
+      // ✅ 不用 data.flex，直接用前端組「合法 Flex」
+      const flexMsg = JSON.parse(JSON.stringify(buildPunchFlex(action, data)));
 
       try{
         await liff.sendMessages([flexMsg]);
       }catch(e){
-        setStatus('warn', '打卡成功，但 Flex 發送失敗：' + fmtErr(e) + '\n\n（已改用前端產生 Flex，若仍失敗通常是 LIFF 權限/環境問題）');
+        setStatus('warn', '打卡成功，但 Flex 發送失敗：' + fmtErr(e) + '\n（若仍是 400，代表 LINE 仍判定訊息格式不合法或權限問題）');
         showCloseBtn();
         return;
       }
 
-      // ✅ Flex 發送成功才關閉
+      // ✅ Flex 成功才關閉
       try{ liff.closeWindow(); return; }catch(e){}
       showCloseBtn();
 
     }catch(err){
       setStatus('bad','送出失敗：' + (err && err.message ? err.message : err));
       showCloseBtn();
+    } finally {
+      bIn.disabled = false; bOut.disabled = false;
     }
   }
 
@@ -402,14 +446,10 @@
     monthLabel.textContent = currentMonth;
     if(profile && profile.userId) loadSchedule(currentMonth);
   }
-  btnPrev.addEventListener('click', ()=> changeMonth(-1));
-  btnNext.addEventListener('click', ()=> changeMonth(1));
-
   function fmtSegs(segs){
     if(!segs || !segs.length) return '—';
     return segs.map(s=>`${s.start}-${s.end}`).join(' / ');
   }
-
   async function loadSchedule(month){
     try{
       setScheduleStatus('', '載入班表中…');
@@ -473,11 +513,12 @@
       uidText.textContent = profile.userId || '--';
       btnCopyId.style.display = profile.userId ? 'block' : 'none';
 
-      // deep link 切頁（schedule 不強迫先抓 GPS）
-      const desired = applyLiffState();
-
       monthLabel.textContent = currentMonth;
+      btnPrev.addEventListener('click', ()=> changeMonth(-1));
+      btnNext.addEventListener('click', ()=> changeMonth(1));
 
+      // ✅ 先套用 deep link，再決定要不要抓定位（看班表不需要 GPS）
+      const desired = applyLiffState();
       if(desired === 'clock'){
         setStatus('', '正在取得定位…');
         await getGps();
