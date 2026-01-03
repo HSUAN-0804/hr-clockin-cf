@@ -79,6 +79,7 @@
       <div class="row">
         <div class="pill" id="pillLogin">尚未登入</div>
         <div class="pill" id="pillGps">定位未取得</div>
+        <div class="pill" id="pillState">狀態：讀取中</div>
       </div>
 
       <div class="clock" id="clock">--:--</div>
@@ -127,6 +128,7 @@
 
   const pillLogin = el('pillLogin');
   const pillGps = el('pillGps');
+  const pillState = el('pillState');
   const helloEl = el('hello');
   const statusBox = el('statusBox');
   const distText = el('distText');
@@ -142,8 +144,12 @@
   const scheduleStatus = el('scheduleStatus');
   const scheduleList = el('scheduleList');
 
+  const btnIn = el('btnIn');
+  const btnOut = el('btnOut');
+
   let profile = null;
   let lastPos = null;
+  let currentState = 'UNKNOWN'; // EMPTY / OFF / IN / UNKNOWN
 
   let currentMonth = (() => {
     const d = new Date();
@@ -170,6 +176,48 @@
   function setScheduleStatus(type, text){
     scheduleStatus.className = 'status ' + (type || '');
     scheduleStatus.textContent = text;
+  }
+
+  function setStateUI(state){
+    const s = String(state || 'UNKNOWN').toUpperCase();
+    currentState = s;
+
+    if(s === 'IN'){
+      pillState.textContent = '狀態：上班中';
+      btnIn.disabled = true;
+      btnOut.disabled = false;
+      return;
+    }
+
+    // EMPTY / OFF / UNKNOWN 都視為可上班
+    pillState.textContent = (s === 'EMPTY') ? '狀態：尚無紀錄' : '狀態：未上班/已下班';
+    btnIn.disabled = false;
+    btnOut.disabled = true;
+  }
+
+  async function refreshState(){
+    if(!profile || !profile.userId) return;
+    try{
+      const resp = await fetch('/api/clock', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'STATUS', userId: profile.userId })
+      });
+      const data = await resp.json();
+      if(data && data.ok){
+        setStateUI(data.state || 'OFF');
+      }else{
+        setStateUI('UNKNOWN');
+      }
+    }catch(e){
+      setStateUI('UNKNOWN');
+    }
+  }
+
+  function stateHintText(){
+    return (currentState === 'IN')
+      ? '目前狀態：上班中（請打下班卡 OUT）'
+      : '目前狀態：未上班/已下班（可打上班卡 IN）';
   }
   function showCloseBtn(){ btnClose.style.display = 'block'; }
   btnClose.addEventListener('click', ()=>{ try{ liff.closeWindow(); }catch(e){} });
@@ -205,14 +253,12 @@
       uidText.textContent = profile.userId || '--';
       btnCopyId.style.display = profile.userId ? 'block' : 'none';
 
-      // 月份/按鈕先綁定（不依賴 GPS）
+      setStatus('', '正在取得定位…');
+      await getGps();
+
       monthLabel.textContent = currentMonth;
       btnPrev.addEventListener('click', ()=> changeMonth(-1));
       btnNext.addEventListener('click', ()=> changeMonth(1));
-
-      // 只要進來就取定位（你原本就是這樣）
-      setStatus('', '正在取得定位…');
-      await getGps();
 
     }catch(err){
       setStatus('bad','初始化失敗：' + (err && err.message ? err.message : err));
@@ -221,20 +267,20 @@
   }
 
   function getGps(){
-    return new Promise((resolve)=>{
+    return new Promise((resolve,reject)=>{
       navigator.geolocation.getCurrentPosition(
         pos=>{
           lastPos=pos;
           pillGps.textContent='定位已取得';
           distText.textContent='已取得（由後端判斷圍欄）';
-          setStatus('ok','定位成功，可以打卡。');
+          setStatus('ok', '定位成功，' + stateHintText());
           resolve(pos);
         },
         ()=>{
           pillGps.textContent='定位失敗';
           setStatus('bad','定位失敗：請允許定位權限後再試一次。');
           showCloseBtn();
-          resolve(null);
+          reject(new Error('gps fail'));
         },
         { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
       );
@@ -245,19 +291,32 @@
     try{
       if(!profile) throw new Error('尚未登入');
 
-      if(!lastPos){
-        await getGps();
-        if(!lastPos){
-          setStatus('bad','定位未取得，請允許定位後再打卡。');
-          showCloseBtn();
-          return;
-        }
+      const act = String(action||'').toUpperCase();
+
+      // ✅ 先用狀態快速擋（避免還沒送出就等很久）
+      if(act==='IN' && currentState==='IN'){
+        setStatus('warn','你目前已在上班中（請先打下班卡 OUT）');
+        return;
+      }
+      if(act==='OUT' && currentState!=='IN'){
+        setStatus('warn','你目前未上班/已下班（請先打上班卡 IN）');
+        return;
       }
 
+      if(!lastPos) await getGps();
+      if(!lastPos){
+        setStatus('bad','定位未取得，請允許定位後再打卡。');
+        showCloseBtn();
+        return;
+      }
+
+      // ✅ 送出中：先把按鈕鎖住，但畫面不會卡住
+      btnIn.disabled = true;
+      btnOut.disabled = true;
       setStatus('', '送出打卡中…');
 
       const payload = {
-        action,
+        action: act,
         userId: profile.userId,
         lat: lastPos.coords.latitude,
         lng: lastPos.coords.longitude,
@@ -274,38 +333,37 @@
       const data = await resp.json();
 
       if(data.ok){
-        setStatus('ok', `✅ 打卡成功（${data.status || 'OK'}）`);
+        // ✅ 立即更新狀態與按鈕（不用等 Flex）
+        setStateUI(act==='IN' ? 'IN' : 'OFF');
+        setStatus('ok', `✅ 打卡成功（${data.status || 'OK'}）\n` + stateHintText());
 
-        // ✅ 回到「原本可用」：只送 GAS 回來的 data.flex
-        try{
-          if(data.flex && window.liff && typeof liff.sendMessages === 'function'){
-            await liff.sendMessages([data.flex]);
-          }
-        }catch(e){
-          // 送失敗也不影響打卡本體
+        // ✅ Flex 送出改成「背景送」（不 await，避免卡住）
+        if(data.flex && window.liff && typeof liff.sendMessages === 'function'){
+          liff.sendMessages([data.flex]).catch(()=>{ /* 不影響打卡本體 */ });
         }
-
-        try{
-          if(window.liff && typeof liff.closeWindow === 'function'){
-            liff.closeWindow();
-            return;
-          }
-        }catch(e){}
 
         showCloseBtn();
         return;
       }
 
+      // 失敗：回到後端狀態
       setStatus('bad', data.message || '打卡失敗');
+      await refreshState();
+      setStatus('warn', (data.message || '打卡失敗') + '\n' + stateHintText());
       showCloseBtn();
+
     }catch(err){
       setStatus('bad','送出失敗：' + (err && err.message ? err.message : err));
       showCloseBtn();
+    }finally{
+      // 依狀態解鎖按鈕
+      setStateUI(currentState);
     }
   }
+  }
 
-  el('btnIn').addEventListener('click', ()=>postClock('IN'));
-  el('btnOut').addEventListener('click', ()=>postClock('OUT'));
+  btnIn.addEventListener('click', ()=>postClock('IN'));
+  btnOut.addEventListener('click', ()=>postClock('OUT'));
 
   btnCopyId.addEventListener('click', async ()=>{
     try{
