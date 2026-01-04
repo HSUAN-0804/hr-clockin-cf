@@ -239,6 +239,103 @@
     });
   }
 
+  // ===== Flex sanitize (避免 LIFF sendMessages 400/INVALID_MESSAGE) =====
+  function fmtErr_(e){
+    const code = (e && (e.code ?? e.status)) ? (e.code ?? e.status) : '';
+    const msg  = e && e.message ? e.message : String(e || '');
+    let raw = '';
+    try{ raw = JSON.stringify(e); }catch(_){}
+    return (code ? `CODE:${code} ` : '') + msg + (raw ? `\nraw=${raw}` : '');
+  }
+
+  // 移除 LIFF 可能拒絕的元件/屬性：filler、flex、paddingStart/paddingEnd、bubble.size
+  function sanitizeFlex_(obj){
+    if (obj === null || obj === undefined) return obj;
+
+    if (Array.isArray(obj)){
+      const out = [];
+      for (const x of obj){
+        const y = sanitizeFlex_(x);
+        if (y === null) continue;
+        out.push(y);
+      }
+      return out;
+    }
+
+    if (typeof obj === 'object'){
+      if (obj.type === 'filler') return null;
+
+      const out = {};
+      for (const [k,v] of Object.entries(obj)){
+        if (k === 'flex') continue;
+        if (k === 'paddingStart' || k === 'paddingEnd') continue;
+        if (k === 'size' && obj.type === 'bubble') continue; // bubble size 拿掉更穩
+        out[k] = sanitizeFlex_(v);
+      }
+      return out;
+    }
+
+    return obj;
+  }
+
+  function normalizeFlexMessage_(flex){
+    let obj = flex;
+
+    // 後端如果回 stringified JSON
+    if (typeof obj === 'string'){
+      try{ obj = JSON.parse(obj); }catch(_){}
+    }
+
+    // 後端若只回 bubble
+    if (obj && obj.type === 'bubble'){
+      obj = { type:'flex', altText:'打卡系統', contents: obj };
+    }
+
+    // 確保 altText
+    if (obj && obj.type === 'flex' && !obj.altText) obj.altText = '打卡系統';
+
+    // deep clone
+    try{ obj = JSON.parse(JSON.stringify(obj)); }catch(_){}
+
+    // sanitize
+    obj = sanitizeFlex_(obj);
+
+    return obj;
+  }
+
+  function clone_(x){
+    try{ return JSON.parse(JSON.stringify(x)); }catch(_){ return x; }
+  }
+
+  // 進一步降級：移除 footer
+  function stripFooter_(msg){
+    const o = clone_(msg);
+    if (o && o.type==='flex' && o.contents && o.contents.type==='bubble'){
+      delete o.contents.footer;
+    }
+    return o;
+  }
+
+  // 最低保險：超簡 flex（只留 body 一句話）
+  function minimalFlex_(){
+    return {
+      type:'flex',
+      altText:'打卡成功',
+      contents:{
+        type:'bubble',
+        body:{
+          type:'box',
+          layout:'vertical',
+          contents:[{ type:'text', text:'打卡成功', weight:'bold', size:'lg' }]
+        }
+      }
+    };
+  }
+
+  let lastFlexDebug_ = '';
+  const btnCopyFlexDebug_ = document.getElementById('btnCopyId'); // reuse existing button
+
+
   async function postClock(action){
     try{
       if(!profile) throw new Error('尚未登入');
@@ -266,14 +363,42 @@
       if(data.ok){
         setStatus('ok', `✅ 打卡成功（${data.status || 'OK'}）`);
 
-        // ✅ 員工端發 Flex（不扣 OA 則數）
+        // ✅ 員工端發 Flex（不扣 OA 則數）— 先清洗再送，避免 CODE:400
         try{
           if(data.flex && window.liff && typeof liff.sendMessages === 'function'){
-            const msg = normalizeFlexMessage_(data.flex);
-          await liff.sendMessages([msg]);
+            const msg1 = normalizeFlexMessage_(data.flex);
+            lastFlexDebug_ = JSON.stringify({phase:'msg1', msg: msg1}, null, 2);
+            try{
+              await liff.sendMessages([msg1]);
+            }catch(e1){
+              // 再降級：去掉 footer
+              const msg2 = stripFooter_(msg1);
+              lastFlexDebug_ = JSON.stringify({phase:'msg2', msg: msg2, err: fmtErr_(e1)}, null, 2);
+              try{
+                await liff.sendMessages([msg2]);
+              }catch(e2){
+                // 最後：超簡 flex
+                const msg3 = minimalFlex_();
+                lastFlexDebug_ = JSON.stringify({phase:'msg3', msg: msg3, err: fmtErr_(e2)}, null, 2);
+                await liff.sendMessages([msg3]);
+              }
+            }
           }
         }catch(e){
-          // 送失敗也不影響打卡本體
+          // 若仍失敗：顯示錯誤並提供複製除錯
+          try{
+            document.getElementById('btnCopyId').style.display = 'block';
+          }catch(_){}
+          setStatus('warn', '打卡成功，但 Flex 發送失敗：\n' + fmtErr_(e) + '\n\n可按「一鍵複製我的LINE ID」(此按鈕已改為複製 debug) 貼回給我。');
+          // 重新定義 copy 行為：複製 debug
+          try{
+            document.getElementById('btnCopyId').onclick = async ()=>{
+              try{
+                await navigator.clipboard.writeText(lastFlexDebug_ || '');
+                setStatus('ok','✅ 已複製 Flex debug，請貼回給我');
+              }catch(_e){}
+            };
+          }catch(_){}
         }
 
         // ✅ 發完再關閉
@@ -359,61 +484,3 @@
 </script>
 </body>
 </html>
-
-
-  // ✅ Sanitize Flex for LIFF sendMessages:
-  // Some components/properties may be rejected and cause CODE:400.
-  // - remove deprecated "filler" components
-  // - remove "flex" property (use default sizing)
-  function sanitizeFlex_(obj){
-    if (obj === null || obj === undefined) return obj;
-
-    if (Array.isArray(obj)){
-      const out = [];
-      for (const x of obj){
-        const y = sanitizeFlex_(x);
-        if (y === null) continue;
-        out.push(y);
-      }
-      return out;
-    }
-
-    if (typeof obj === 'object'){
-      if (obj.type === 'filler') return null;
-
-      const out = {};
-      for (const [k,v] of Object.entries(obj)){
-        // remove flex property to avoid strict validators
-        if (k === 'flex') continue;
-        out[k] = sanitizeFlex_(v);
-      }
-      return out;
-    }
-
-    return obj;
-  }
-
-  function normalizeFlexMessage_(flex){
-    let obj = flex;
-
-    // If backend returned stringified JSON
-    if (typeof obj === 'string'){
-      try { obj = JSON.parse(obj); } catch(e) {}
-    }
-
-    // If backend returned only bubble
-    if (obj && obj.type === 'bubble'){
-      obj = { type:'flex', altText:'打卡系統', contents: obj };
-    }
-
-    // Ensure altText
-    if (obj && obj.type === 'flex' && !obj.altText) obj.altText = '打卡系統';
-
-    // Deep clone to plain JSON
-    try { obj = JSON.parse(JSON.stringify(obj)); } catch(e) {}
-
-    // Sanitize
-    obj = sanitizeFlex_(obj);
-
-    return obj;
-  }
