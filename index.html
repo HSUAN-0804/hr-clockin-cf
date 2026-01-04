@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>H.R燈藝｜員工打卡</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
   <style>
     :root{
       --bg:#0b0c10;--text:#f5f5f7;--muted:#b7bbc3;--border:rgba(255,255,255,.08);
@@ -33,8 +34,9 @@
     button{width:100%;border:none;border-radius:16px;padding:14px 14px;font-size:18px;font-weight:900;color:var(--text);
       background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));border:1px solid var(--border);cursor:pointer}
     button:active{transform:scale(.99)}
+    button[disabled]{opacity:.55;cursor:not-allowed}
     .status{margin-top:12px;padding:12px 12px;border-radius:14px;border:1px solid var(--border);
-      background:rgba(0,0,0,.22);font-size:14px;line-height:1.4;color:var(--muted)}
+      background:rgba(0,0,0,.22);font-size:14px;line-height:1.4;color:var(--muted);white-space:pre-line}
     .status.ok{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95)}
     .status.bad{border-color:rgba(239,68,68,.38);color:rgba(254,226,226,.95)}
     .status.warn{border-color:rgba(245,158,11,.35);color:rgba(255,237,213,.95)}
@@ -49,6 +51,7 @@
       background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.96);
       cursor:pointer;display:none}
     .hidden{display:none}
+
     /* schedule */
     .scheduleTop{display:flex;gap:10px;align-items:center;margin:8px 0 12px}
     .monthBox{flex:1;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.04);
@@ -65,6 +68,7 @@
     .note{color:rgba(255,255,255,.60);font-size:12px;margin-top:4px}
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <div class="brand">員工專用</div>
@@ -121,6 +125,7 @@
 
 <script>
   const LIFF_ID = "2008810311-jmqyUaTN";
+  const LIFF_HOME_URL = `https://liff.line.me/${LIFF_ID}`;
 
   const el = (id)=>document.getElementById(id);
   const tabClock = el('tabClock'), tabSchedule = el('tabSchedule');
@@ -149,15 +154,9 @@
 
   let profile = null;
   let lastPos = null;
-  let currentState = 'UNKNOWN'; // EMPTY / OFF / IN / UNKNOWN
 
-  // 初始 UI
-  setStateUI('UNKNOWN');
-
-  let currentMonth = (() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-  })();
+  // 狀態：EMPTY/OFF/IN/UNKNOWN（EMPTY與OFF都視為可IN）
+  let currentState = 'UNKNOWN';
 
   function setTab(which){
     if(which==='clock'){
@@ -181,23 +180,130 @@
     scheduleStatus.textContent = text;
   }
 
+  function showCloseBtn(){ btnClose.style.display = 'block'; }
+  btnClose.addEventListener('click', ()=>{ try{ liff.closeWindow(); }catch(e){} });
+
   function setStateUI(state){
     const s = String(state || 'UNKNOWN').toUpperCase();
     currentState = s;
 
-    if(s === 'IN'){
+    if (s === 'IN'){
       pillState.textContent = '狀態：上班中';
       btnIn.disabled = true;
       btnOut.disabled = false;
       return;
     }
 
-    // EMPTY / OFF / UNKNOWN 都視為可上班
-    pillState.textContent = (s === 'EMPTY') ? '狀態：尚無紀錄' : '狀態：未上班/已下班';
+    // EMPTY / OFF / UNKNOWN → 可 IN，不可 OUT
+    pillState.textContent = (s === 'EMPTY') ? '狀態：紀錄空白' : '狀態：未上班/已下班';
     btnIn.disabled = false;
     btnOut.disabled = true;
   }
 
+  function stateHintText(){
+    return (currentState === 'IN')
+      ? '目前狀態：上班中（請打下班卡 OUT）'
+      : '目前狀態：未上班/已下班（可打上班卡 IN）';
+  }
+
+  // ===== 時間格式：以「按下按鈕當下」為主 =====
+  function fmtDateTW(d){
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const da = String(d.getDate()).padStart(2,'0');
+    return `${y}/${m}/${da}`;
+  }
+  function fmtTimeHHmm(d){
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    return `${hh}:${mm}`;
+  }
+
+  // ===== 100%穩的 Flex（不碰奇怪參數，避免 invalid）=====
+  function buildPunchFlex(action, when){
+    const act = String(action).toUpperCase()==='OUT' ? 'OUT' : 'IN';
+    const title = (act==='OUT') ? '下班打卡' : '上班打卡';
+    const timeStr = fmtTimeHHmm(when);
+    const dateStr = fmtDateTW(when);
+
+    return {
+      type: "flex",
+      altText: `${title} ${timeStr}`,
+      contents: {
+        type: "bubble",
+        header: {
+          type: "box",
+          layout: "vertical",
+          backgroundColor: "#0F172A",
+          paddingAll: "14px",
+          contents: [
+            { type: "text", text: "H.R燈藝｜員工打卡", size: "sm", weight: "bold", color: "#F5D34D" }
+          ]
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          paddingAll: "16px",
+          spacing: "md",
+          contents: [
+            { type: "text", text: "打卡已送出", size: "md", weight: "bold", color: "#16A34A" },
+            {
+              type: "box",
+              layout: "horizontal",
+              contents: [
+                { type: "text", text: title, size: "lg", weight: "bold", color: "#374151", flex: 5 },
+                { type: "text", text: timeStr, size: "xxl", weight: "bold", color: "#111827", flex: 5, align: "end" }
+              ],
+              alignItems: "baseline"
+            },
+            {
+              type: "box",
+              layout: "baseline",
+              contents: [
+                { type:"text", text:"日期", size:"sm", color:"#6B7280", flex:3 },
+                { type:"text", text:dateStr, size:"sm", color:"#111827", flex:7, align:"end" }
+              ]
+            }
+          ]
+        },
+        footer: {
+          type: "box",
+          layout: "vertical",
+          paddingAll: "14px",
+          contents: [
+            { type:"button", style:"primary", action:{ type:"uri", label:"打開打卡頁", uri: LIFF_HOME_URL } }
+          ]
+        }
+      }
+    };
+  }
+
+  // ===== 用 sendBeacon/keepalive 把打卡送出（不等回應）=====
+  function queueClockWrite(payload){
+    try{
+      // sendBeacon（最適合頁面即將關閉）
+      if (navigator.sendBeacon) {
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        const ok = navigator.sendBeacon('/api/clock', blob);
+        if (ok) return true;
+      }
+    }catch(e){}
+
+    // fallback：fetch keepalive（不要 await）
+    try{
+      fetch('/api/clock', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload),
+        keepalive: true
+      }).catch(()=>{});
+      return true;
+    }catch(e){
+      return false;
+    }
+  }
+
+  // ===== 狀態查詢（仍保留，進頁面時用來鎖定按鈕）=====
   async function refreshState(){
     if(!profile || !profile.userId) return;
     try{
@@ -207,73 +313,18 @@
         body: JSON.stringify({ action:'STATUS', userId: profile.userId })
       });
       const data = await resp.json();
-      if(data && data.ok){
-        setStateUI(data.state || 'OFF');
-      }else{
-        setStateUI('UNKNOWN');
-      }
+      if(data && data.ok) setStateUI(data.state || 'OFF');
+      else setStateUI('UNKNOWN');
     }catch(e){
       setStateUI('UNKNOWN');
     }
   }
-
-  function stateHintText(){
-    return (currentState === 'IN')
-      ? '目前狀態：上班中（請打下班卡 OUT）'
-      : '目前狀態：未上班/已下班（可打上班卡 IN）';
-  }
-  function showCloseBtn(){ btnClose.style.display = 'block'; }
-  btnClose.addEventListener('click', ()=>{ try{ liff.closeWindow(); }catch(e){} });
 
   function tickClock(){
     const d = new Date();
     clockEl.textContent = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   }
   setInterval(tickClock, 1000); tickClock();
-
-  async function init(){
-    try{
-      await liff.init({ liffId: LIFF_ID });
-
-      try{
-        clientText.textContent = (liff.isInClient && liff.isInClient()) ? 'LINE內（可關閉）' : '非LINE內（不可自動關閉）';
-      }catch(e){ clientText.textContent='未知'; }
-
-      if(!liff.isLoggedIn()){
-        pillLogin.textContent='未登入';
-        if(!liff.isInClient || !liff.isInClient()){
-          setStatus('warn','請用 LINE 內開啟此頁面（LIFF）。');
-          showCloseBtn();
-          return;
-        }
-        setStatus('warn','請先登入 LINE 才能打卡。');
-        liff.login(); return;
-      }
-
-      profile = await liff.getProfile();
-      pillLogin.textContent='已登入';
-      helloEl.textContent = `嗨 ${profile.displayName}，請先取得定位後再打卡。`;
-      uidText.textContent = profile.userId || '--';
-      btnCopyId.style.display = profile.userId ? 'block' : 'none';
-
-      // ✅ 先查一次狀態，立即鎖定 IN/OUT 按鈕
-      await refreshState();
-      setStatus('', '正在取得定位…');
-      // ✅ 定位不阻塞畫面（避免一直卡讀取中）
-      getGps().then(()=>{
-        if(lastPos) setStatus('ok', '定位成功，' + stateHintText());
-        else setStatus('warn', '定位未取得：仍可查看狀態，但打卡需允許定位。');
-      });
-
-      monthLabel.textContent = currentMonth;
-      btnPrev.addEventListener('click', ()=> changeMonth(-1));
-      btnNext.addEventListener('click', ()=> changeMonth(1));
-
-    }catch(err){
-      setStatus('bad','初始化失敗：' + (err && err.message ? err.message : err));
-      showCloseBtn();
-    }
-  }
 
   function getGps(){
     return new Promise((resolve)=>{
@@ -284,7 +335,7 @@
           distText.textContent='已取得（由後端判斷圍欄）';
           resolve(pos);
         },
-        err=>{
+        ()=>{
           lastPos=null;
           pillGps.textContent='定位失敗';
           distText.textContent='未取得';
@@ -295,79 +346,80 @@
     });
   }
 
+  function fmtErr(e){
+    const code = (e && (e.code ?? e.status)) ? (e.code ?? e.status) : '';
+    const msg  = e && e.message ? e.message : String(e || '');
+    return (code ? `CODE:${code} ` : '') + msg;
+  }
+
   async function postClock(action){
+    const act = String(action).toUpperCase();
+
+    // 立刻反應：先用目前狀態做擋
+    if(act==='IN' && currentState==='IN'){
+      setStatus('warn','你目前已在上班中（請先打下班卡 OUT）');
+      return;
+    }
+    if(act==='OUT' && currentState!=='IN'){
+      setStatus('warn','你目前未上班/已下班（請先打上班卡 IN）');
+      return;
+    }
+
+    if(!profile){
+      setStatus('bad','尚未登入，請重新開啟。');
+      showCloseBtn();
+      return;
+    }
+
+    // 沒定位就先拿（這段很快；拿不到就直接提示）
+    if(!lastPos) await getGps();
+    if(!lastPos){
+      setStatus('bad','定位未取得，請允許定位後再打卡。');
+      showCloseBtn();
+      return;
+    }
+
+    // ✅ 立即更新前端狀態（不等後端）
+    setStateUI(act==='IN' ? 'IN' : 'OFF');
+    btnIn.disabled = true;
+    btnOut.disabled = true;
+    setStatus('ok', '已送出打卡，正在發送 Flex…\n（不等待後台寫入）');
+
+    const when = new Date(); // ✅ 以按下當下時間為主
+    const payload = {
+      action: act,
+      userId: profile.userId,
+      lat: lastPos.coords.latitude,
+      lng: lastPos.coords.longitude,
+      device: navigator.userAgent || '',
+      note: '',
+      client_ts: when.toISOString()
+    };
+
+    // ✅ 後台慢慢寫：先把資料丟出去（不 await）
+    queueClockWrite(payload);
+
+    // ✅ 先發 Flex（一定要在 closeWindow 前）
+    const flexMsg = buildPunchFlex(act, when);
     try{
-      if(!profile) throw new Error('尚未登入');
-
-      // ✅ 先抓一次狀態（避免前端狀態過期）
-      await refreshState();
-
-      const act = String(action||'').toUpperCase();
-
-      // ✅ 先用狀態快速擋（避免還沒送出就等很久）
-      if(act==='IN' && currentState==='IN'){
-        setStatus('warn','你目前已在上班中（請先打下班卡 OUT）');
-        return;
-      }
-      if(act==='OUT' && currentState!=='IN'){
-        setStatus('warn','你目前未上班/已下班（請先打上班卡 IN）');
-        return;
-      }
-
-      if(!lastPos) await getGps();
-      if(!lastPos){
-        setStatus('bad','定位未取得，請允許定位後再打卡。');
-        showCloseBtn();
-        return;
-      }
-
-      // ✅ 送出中：先把按鈕鎖住，但畫面不會卡住
-      btnIn.disabled = true;
-      btnOut.disabled = true;
-      setStatus('', '送出打卡中…');
-
-      const payload = {
-        action: act,
-        userId: profile.userId,
-        lat: lastPos.coords.latitude,
-        lng: lastPos.coords.longitude,
-        device: navigator.userAgent || '',
-        note: ''
-      };
-
-      const resp = await fetch('/api/clock', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(payload)
-      });
-
-      const data = await resp.json();
-
-      if(data.ok){
-        // ✅ 立即更新狀態與按鈕（不用等 Flex）
-        setStateUI(act==='IN' ? 'IN' : 'OFF');
-        setStatus('ok', `✅ 打卡成功（${data.status || 'OK'}）\n` + stateHintText());
-
-        // ✅ Flex 送出改成「背景送」（不 await，避免卡住）
-        if(data.flex && window.liff && typeof liff.sendMessages === 'function'){
-          liff.sendMessages([data.flex]).catch(()=>{ /* 不影響打卡本體 */ });
-        }
-
-        showCloseBtn();
-        return;
-      }
-
-      // 失敗：回到後端狀態
-      setStatus('bad', data.message || '打卡失敗');
-      await refreshState();
-      setStatus('warn', (data.message || '打卡失敗') + '\n' + stateHintText());
+      await liff.sendMessages([flexMsg]);
+    }catch(e){
+      // Flex 失敗：不關閉，讓你看得到錯誤、可重試
+      setStateUI(currentState); // 回到剛才狀態（你也可改成不回）
+      setStatus('warn','打卡已送出，但 Flex 發送失敗：' + fmtErr(e));
       showCloseBtn();
+      return;
+    }
 
-    }catch(err){
-      setStatus('bad','送出失敗：' + (err && err.message ? err.message : err));
+    // ✅ Flex 成功 → 立刻關閉 LIFF
+    try{
+      liff.closeWindow();
+      return;
+    }catch(e){
+      // 不在 LINE 內就顯示關閉按鈕
+      setStatus('ok', 'Flex 已送出 ✅\n（若未自動關閉，請按下方「關閉視窗」）');
       showCloseBtn();
-    }finally{
-      // 依狀態解鎖按鈕
+      // 依狀態解鎖
       setStateUI(currentState);
     }
   }
@@ -382,6 +434,12 @@
     }catch(e){}
   });
 
+  // ===== schedule（保留原本功能）=====
+  let currentMonth = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  })();
+
   function changeMonth(delta){
     const [y,m] = currentMonth.split('-').map(Number);
     const d = new Date(y, m-1 + delta, 1);
@@ -389,6 +447,9 @@
     monthLabel.textContent = currentMonth;
     if(profile && profile.userId) loadSchedule(currentMonth);
   }
+  btnPrev.addEventListener('click', ()=> changeMonth(-1));
+  btnNext.addEventListener('click', ()=> changeMonth(1));
+
   function fmtSegs(segs){
     if(!segs || !segs.length) return '—';
     return segs.map(s=>`${s.start}-${s.end}`).join(' / ');
@@ -431,6 +492,53 @@
     }
   }
 
+  async function init(){
+    try{
+      await liff.init({ liffId: LIFF_ID });
+
+      try{
+        clientText.textContent = (liff.isInClient && liff.isInClient()) ? 'LINE內（可關閉）' : '非LINE內（不可自動關閉）';
+      }catch(e){ clientText.textContent='未知'; }
+
+      if(!liff.isLoggedIn()){
+        pillLogin.textContent='未登入';
+        if(!liff.isInClient || !liff.isInClient()){
+          setStatus('warn','請用 LINE 內開啟此頁面（LIFF）。');
+          showCloseBtn();
+          return;
+        }
+        setStatus('warn','請先登入 LINE 才能打卡。');
+        liff.login(); return;
+      }
+
+      profile = await liff.getProfile();
+      pillLogin.textContent='已登入';
+      helloEl.textContent = `嗨 ${profile.displayName}，請先取得定位後再打卡。`;
+      uidText.textContent = profile.userId || '--';
+      btnCopyId.style.display = profile.userId ? 'block' : 'none';
+
+      monthLabel.textContent = currentMonth;
+      setStateUI('UNKNOWN');
+      setStatus('', '讀取狀態中…');
+
+      // 進頁面先查狀態（這個很快）
+      await refreshState();
+      setStatus('ok', stateHintText());
+
+      // 定位不阻塞（背景抓）
+      getGps().then(()=>{
+        if(lastPos) setStatus('ok', '定位成功，' + stateHintText());
+        else setStatus('warn', '定位未取得：打卡需允許定位。');
+      });
+
+    }catch(err){
+      setStatus('bad','初始化失敗：' + (err && err.message ? err.message : err));
+      showCloseBtn();
+    }
+  }
+
+  // 初始化
+  setStateUI('UNKNOWN');
   init();
 </script>
 </body>
