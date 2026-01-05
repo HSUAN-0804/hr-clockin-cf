@@ -364,10 +364,6 @@
       altText:'打卡成功',
       contents:{
         type:'bubble',
-        styles:{
-          body:{ backgroundColor:'#FFFFFF' },
-          footer:{ backgroundColor:'#FFFFFF' }
-        },
         body:{
           type:'box',
           layout:'vertical',
@@ -376,10 +372,7 @@
           contents:[
             { type:'text', text:`H.R燈藝｜員工打卡｜${name}`, size:'sm', weight:'bold', color:'#374151', wrap:true },
             { type:'separator', margin:'md', color:'#E5E7EB' },
-
             { type:'text', text:titleLine, size:'xxl', weight:'bold', color:'#111827', wrap:true },
-            { type:'separator', margin:'md', color:'#E5E7EB' },
-
             { type:'box', layout:'baseline', spacing:'sm', contents:[
               { type:'text', text:'日期', size:'sm', color:'#6B7280', flex:3 },
               { type:'text', text:dateStr, size:'sm', color:'#111827', flex:7, align:'end', wrap:true }
@@ -390,104 +383,17 @@
           type:'box',
           layout:'vertical',
           paddingAll:'14px',
-          contentasync function postClock(action){
+          contents:[
+            { type:'button', style:'primary', color:'#111827', action:{ type:'uri', label:'開啟打卡頁', uri:`https://liff.line.me/${LIFF_ID}` } }
+          ]
+        }
+      }
+    };
+  }
+
+async function postClock(action){
     try{
       if(!profile) throw new Error('尚未登入');
-
-      const act = String(action||'').toUpperCase();
-      if(act !== 'IN' && act !== 'OUT') throw new Error('無效動作');
-
-      // 立即 UI 回饋
-      setStatus('', '送出打卡中…');
-      btnIn.disabled = true;
-      btnOut.disabled = true;
-
-      // GPS（必要）
-      if(!lastPos) await getGps();
-      if(!lastPos){
-        setStatus('bad','定位未取得，請允許定位後再打卡。');
-        btnIn.disabled = false;
-        btnOut.disabled = false;
-        showCloseBtn();
-        return;
-      }
-
-      // 按下當下時間
-      const when = new Date();
-      const hhmm = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}`;
-      const dateStr = `${when.getFullYear()}-${String(when.getMonth()+1).padStart(2,'0')}-${String(when.getDate()).padStart(2,'0')}`;
-
-      const name = (window.__empDisplayName && String(window.__empDisplayName).trim())
-        ? String(window.__empDisplayName).trim()
-        : String(profile.displayName||'').trim();
-
-      const payload = {
-        action: act,
-        userId: profile.userId,
-        lat: lastPos.coords.latitude,
-        lng: lastPos.coords.longitude,
-        accuracy: lastPos.coords.accuracy,
-        device: navigator.userAgent || '',
-        note: ''
-      };
-
-      // ✅ 先嘗試向後端拿「正式 flex」，但只等短時間（保持很快）
-      let serverFlex = null;
-      try{
-        const controller = new AbortController();
-        const timer = setTimeout(()=>controller.abort(), 700); // 最多等 0.7s
-        const resp = await fetch('/api/clock', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(payload),
-          signal: controller.signal
-        });
-        clearTimeout(timer);
-        const data = await resp.json().catch(()=>null);
-        if(data && data.ok && data.flex){
-          serverFlex = data.flex;
-        }
-      }catch(e){
-        // timeout/abort 或其他錯誤：忽略，走 fallback
-      }
-
-      // 若 0.7s 內拿不到正式 flex，就背景寫入（不等待），用本地 flex 送出
-      if(!serverFlex){
-        queueClockWrite_(payload);
-      }
-
-      // ✅ 選用要送的 flex：有 serverFlex 就用（外觀一致）；否則用 localFlex（速度優先）
-      const toSend = serverFlex ? serverFlex : buildLocalFlex_(act, name, hhmm, dateStr);
-      const msg = (typeof normalizeFlexMessage_ === 'function') ? normalizeFlexMessage_(toSend) : toSend;
-
-      try{
-        await liff.sendMessages([msg]);
-      }catch(e){
-        setStatus('warn', 'Flex 發送失敗：' + (typeof fmtErr_==='function' ? fmtErr_(e) : (e && e.message ? e.message : e)));
-        btnIn.disabled = false;
-        btnOut.disabled = false;
-        showCloseBtn();
-        return;
-      }
-
-      // ✅ 送出就關閉
-      try{
-        liff.closeWindow();
-        return;
-      }catch(e){
-        setStatus('ok', 'Flex 已送出 ✅（若未自動關閉，請按「關閉視窗」）');
-        btnIn.disabled = false;
-        btnOut.disabled = false;
-        showCloseBtn();
-      }
-    }catch(err){
-      setStatus('bad', '送出失敗：' + (err && err.message ? err.message : err));
-      btnIn.disabled = false;
-      btnOut.disabled = false;
-      showCloseBtn();
-    }
-  }
-ile) throw new Error('尚未登入');
 
       const act = String(action||'').toUpperCase();
       if(act !== 'IN' && act !== 'OUT') throw new Error('無效動作');
