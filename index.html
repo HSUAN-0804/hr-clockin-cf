@@ -206,6 +206,20 @@
       }
 
       profile = await liff.getProfile();
+
+      // ✅ 顯示員工註冊名稱（employees.display_name），避免用 LINE 暱稱
+      window.__empDisplayName = localStorage.getItem('empDisplayName') || '';
+      // 背景查一次 STATUS 取得 display_name（不阻塞畫面）
+      fetch('/api/clock', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'STATUS', userId: profile.userId })
+      }).then(r=>r.json()).then(d=>{
+        if(d && d.ok && d.display_name){
+          window.__empDisplayName = String(d.display_name).trim();
+          localStorage.setItem('empDisplayName', window.__empDisplayName);
+        }
+      }).catch(()=>{});
       pillLogin.textContent='已登入';
       helloEl.textContent = `嗨 ${profile.displayName}，請先取得定位後再打卡。`;
       uidText.textContent = profile.userId || '--';
@@ -380,9 +394,18 @@
   }
 
   // ✅ 產生「本地 Flex」（安全版，避免 400；不含 filler、不含 bubble.size）
-  function buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distText, statusText){
-    // 本地 fallback：版面盡量貼近「正式 Flex」(白底 + 分隔線 + 欄位列 + 狀態徽章 + 黑色按鈕)
+  function buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distM){
+    // 本地 fallback：版面貼近正式版，且顯示前端計算的距離（綠/紅）
     const titleLine = (act==='IN' ? '上班打卡 ' : '下班打卡 ') + hhmm;
+
+    const d = Math.round(Number(distM || 0));
+    const inRange = d <= FENCE_M;
+    const distText = `${d}m / ${FENCE_M}m（${inRange ? '範圍內' : '超出'}）`;
+    const distColor = inRange ? '#166534' : '#B91C1C';
+
+    const statusText = (act==='IN') ? '上班' : '下班';
+    const statusBg = (act==='IN') ? '#DCFCE7' : '#E5E7EB';
+    const statusColor = (act==='IN') ? '#166534' : '#111827';
 
     const rowText = (label, value, valueColor) => ({
       type: 'box',
@@ -397,12 +420,12 @@
     const statusChip = {
       type: 'box',
       layout: 'vertical',
-      backgroundColor: '#E5E7EB',
+      backgroundColor: statusBg,
       cornerRadius: '999px',
       paddingAll: '4px',
       flex: 0,
       contents: [
-        { type: 'text', text: statusText, size: 'xs', weight: 'bold', color: '#111827', wrap: false }
+        { type: 'text', text: statusText, size: 'xs', weight: 'bold', color: statusColor, wrap: false }
       ]
     };
 
@@ -416,7 +439,6 @@
         { type: 'box', layout: 'horizontal', flex: 7, justifyContent: 'flex-end', contents: [ chip ] }
       ]
     });
-
 
     return {
       type:'flex',
@@ -441,7 +463,7 @@
 
             rowText('日期', dateStr, '#111827'),
             rowText('時間', timeStr, '#111827'),
-            rowText('距離', distText, '#111827'),
+            rowText('距離', distText, distColor),
             rowChipRight('狀態', statusChip)
           ]
         },
@@ -489,7 +511,9 @@ async function postClock(action){
       const distText = formatDistText_(distM);
       const statusText = (act === 'IN') ? '上班' : '下班';
   
-      const name = (window.__empDisplayName && String(window.__empDisplayName).trim())
+            const name = (window.__empDisplayName && String(window.__empDisplayName).trim())
+        ? String(window.__empDisplayName).trim()
+        : String(profile.displayName || '').trim() || '員工';
         ? String(window.__empDisplayName).trim()
         : String(profile.displayName || '').trim() || '員工';
 
@@ -545,7 +569,7 @@ async function postClock(action){
       }
 
       // ✅ 選用要送的 flex：有 serverFlex 用它（外觀完全一致）；否則用 localFlex（速度優先）
-      const toSend = serverFlex ? serverFlex : buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distText, statusText);
+      const toSend = serverFlex ? serverFlex : buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distM);
       const msg = (typeof normalizeFlexMessage_ === 'function') ? normalizeFlexMessage_(toSend) : toSend;
 
       // 送出（保留降級重試）
