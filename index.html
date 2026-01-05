@@ -248,6 +248,78 @@
     return (code ? `CODE:${code} ` : '') + msg + (raw ? `\nraw=${raw}` : '');
   }
 
+  // ✅ 送出打卡不等待後端：sendBeacon / fetch(keepalive)
+  function queueClockWrite_(payload){
+    try{
+      if (navigator.sendBeacon){
+        const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
+        const ok = navigator.sendBeacon('/api/clock', blob);
+        if (ok) return true;
+      }
+    }catch(e){}
+    try{
+      fetch('/api/clock', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload),
+        keepalive:true
+      }).catch(()=>{});
+      return true;
+    }catch(e){}
+    return false;
+  }
+
+  // ✅ 產生「本地 Flex」（安全元件：text/box/separator/button，不用 filler，不用 bubble.size）
+  function buildLocalFlex_(act, name, hhmm, dateStr, distText, statusText){
+    const titleLine = (act==='IN' ? '上班打卡 ' : '下班打卡 ') + hhmm;
+    return {
+      type:'flex',
+      altText: '打卡成功',
+      contents:{
+        type:'bubble',
+        styles:{
+          body:{ backgroundColor:'#FFFFFF' },
+          footer:{ backgroundColor:'#FFFFFF' }
+        },
+        body:{
+          type:'box',
+          layout:'vertical',
+          paddingAll:'16px',
+          spacing:'md',
+          contents:[
+            { type:'text', text:`H.R燈藝｜員工打卡｜${name}`, size:'sm', weight:'bold', color:'#374151', wrap:true },
+            { type:'separator', margin:'md', color:'#E5E7EB' },
+
+            { type:'text', text:titleLine, size:'xxl', weight:'bold', color:'#111827', wrap:true },
+            { type:'separator', margin:'md', color:'#E5E7EB' },
+
+            { type:'box', layout:'baseline', spacing:'sm', contents:[
+              { type:'text', text:'日期', size:'sm', color:'#6B7280', flex:3 },
+              { type:'text', text:dateStr, size:'sm', color:'#111827', flex:7, align:'end', wrap:true }
+            ]},
+            { type:'box', layout:'baseline', spacing:'sm', contents:[
+              { type:'text', text:'距離', size:'sm', color:'#6B7280', flex:3 },
+              { type:'text', text:distText, size:'sm', color:'#111827', flex:7, align:'end', wrap:true }
+            ]},
+            { type:'box', layout:'baseline', spacing:'sm', contents:[
+              { type:'text', text:'狀態', size:'sm', color:'#6B7280', flex:3 },
+              { type:'text', text:statusText, size:'sm', color:'#111827', flex:7, align:'end', wrap:true }
+            ]}
+          ]
+        },
+        footer:{
+          type:'box',
+          layout:'vertical',
+          paddingAll:'14px',
+          contents:[
+            { type:'button', style:'primary', color:'#111827', action:{ type:'uri', label:'開啟打卡頁', uri:`https://liff.line.me/${LIFF_ID}` } }
+          ]
+        }
+      }
+    };
+  }
+
+
   // 移除 LIFF 可能拒絕的元件/屬性：filler、flex、paddingStart/paddingEnd、bubble.size
   function sanitizeFlex_(obj){
     if (obj === null || obj === undefined) return obj;
@@ -338,49 +410,80 @@
   async function postClock(action){
     try{
       if(!profile) throw new Error('尚未登入');
-      if(!lastPos) await getGps();
 
+      const act = String(action||'').toUpperCase();
+      if(act !== 'IN' && act !== 'OUT') throw new Error('無效動作');
+
+      // 立即 UI 回饋
       setStatus('', '送出打卡中…');
+      btnIn.disabled = true;
+      btnOut.disabled = true;
 
+      // GPS（必要）
+      if(!lastPos) await getGps();
+      if(!lastPos){
+        setStatus('bad','定位未取得，請允許定位後再打卡。');
+        btnIn.disabled = false;
+        btnOut.disabled = false;
+        showCloseBtn();
+        return;
+      }
+
+      // 本地時間（按下當下）
+      const when = new Date();
+      const hhmm = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}`;
+      const dateStr = `${when.getFullYear()}-${String(when.getMonth()+1).padStart(2,'0')}-${String(when.getDate()).padStart(2,'0')}`;
+
+      // 名字：優先用後端 STATUS 存下的 displayName（若你有），不然用 profile.displayName
+      const name = (window.__empDisplayName && String(window.__empDisplayName).trim()) ? String(window.__empDisplayName).trim() : String(profile.displayName||'').trim();
+
+      // 距離/狀態：先用簡單值（後端會再寫入精準）
+      const distText = '—';
+      const statusText = (act==='IN') ? '上班' : '下班';
+
+      // ✅ 背景寫入（不等待）
       const payload = {
-        action,
+        action: act,
         userId: profile.userId,
         lat: lastPos.coords.latitude,
         lng: lastPos.coords.longitude,
+        accuracy: lastPos.coords.accuracy,
         device: navigator.userAgent || '',
         note: ''
       };
+      queueClockWrite_(payload);
 
-      const resp = await fetch('/api/clock', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(payload)
-      });
+      // ✅ 先發送 Flex（很快）
+      const localFlex = buildLocalFlex_(act, name, hhmm, dateStr, distText, statusText);
+      const msg = normalizeFlexMessage_ ? normalizeFlexMessage_(localFlex) : localFlex;
 
-      const data = await resp.json();
+      try{
+        await liff.sendMessages([msg]);
+      }catch(e){
+        setStatus('warn', 'Flex 發送失敗：' + fmtErr_(e));
+        btnIn.disabled = false;
+        btnOut.disabled = false;
+        showCloseBtn();
+        return;
+      }
 
-      if(data.ok){
-        setStatus('ok', `✅ 打卡成功（${data.status || 'OK'}）`);
-
-        // ✅ 員工端發 Flex（不扣 OA 則數）— 先清洗再送，避免 CODE:400
-        try{
-          if(data.flex && window.liff && typeof liff.sendMessages === 'function'){
-            const msg1 = normalizeFlexMessage_(data.flex);
-            lastFlexDebug_ = JSON.stringify({phase:'msg1', msg: msg1}, null, 2);
-            try{
-              await liff.sendMessages([msg1]);
-            }catch(e1){
-              // 再降級：去掉 footer
-              const msg2 = stripFooter_(msg1);
-              lastFlexDebug_ = JSON.stringify({phase:'msg2', msg: msg2, err: fmtErr_(e1)}, null, 2);
-              try{
-                await liff.sendMessages([msg2]);
-              }catch(e2){
-                // 最後：超簡 flex
-                const msg3 = minimalFlex_();
-                lastFlexDebug_ = JSON.stringify({phase:'msg3', msg: msg3, err: fmtErr_(e2)}, null, 2);
-                await liff.sendMessages([msg3]);
-              }
+      // ✅ 送出就關閉
+      try{
+        liff.closeWindow();
+        return;
+      }catch(e){
+        setStatus('ok', 'Flex 已送出 ✅（若未自動關閉，請按「關閉視窗」）');
+        btnIn.disabled = false;
+        btnOut.disabled = false;
+        showCloseBtn();
+      }
+    }catch(err){
+      setStatus('bad', '送出失敗：' + (err && err.message ? err.message : err));
+      btnIn.disabled = false;
+      btnOut.disabled = false;
+      showCloseBtn();
+    }
+  }
             }
           }
         }catch(e){
