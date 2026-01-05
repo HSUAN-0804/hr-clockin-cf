@@ -357,13 +357,55 @@
   }
 
   // ✅ 產生「本地 Flex」（安全版，避免 400；不含 filler、不含 bubble.size）
-  function buildLocalFlex_(act, name, hhmm, dateStr){
+  function buildLocalFlex_(act, name, hhmm, dateStr, timeStr){
+    // 本地 fallback：版面盡量貼近「正式 Flex」(白底 + 分隔線 + 欄位列 + 狀態徽章 + 黑色按鈕)
     const titleLine = (act==='IN' ? '上班打卡 ' : '下班打卡 ') + hhmm;
+
+    const rowText = (label, value, valueColor) => ({
+      type: 'box',
+      layout: 'baseline',
+      spacing: 'sm',
+      contents: [
+        { type: 'text', text: String(label), size: 'sm', color: '#6B7280', flex: 3 },
+        { type: 'text', text: String(value), size: 'sm', color: valueColor || '#111827', flex: 7, align: 'end', wrap: true }
+      ]
+    });
+
+    const statusText = (act==='IN') ? '上班' : '下班';
+    const statusChip = {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#E5E7EB',
+      cornerRadius: '999px',
+      paddingAll: '4px',
+      flex: 0,
+      contents: [
+        { type: 'text', text: statusText, size: 'xs', weight: 'bold', color: '#111827', wrap: false }
+      ]
+    };
+
+    const rowChipRight = (label, chip) => ({
+      type: 'box',
+      layout: 'horizontal',
+      spacing: 'sm',
+      alignItems: 'center',
+      contents: [
+        { type: 'text', text: String(label), size: 'sm', color: '#6B7280', flex: 3 },
+        { type: 'box', layout: 'horizontal', flex: 7, justifyContent: 'flex-end', contents: [ chip ] }
+      ]
+    });
+
+    const distText = '—';
+
     return {
       type:'flex',
       altText:'打卡成功',
       contents:{
         type:'bubble',
+        styles:{
+          body:{ backgroundColor:'#FFFFFF' },
+          footer:{ backgroundColor:'#FFFFFF' }
+        },
         body:{
           type:'box',
           layout:'vertical',
@@ -372,11 +414,14 @@
           contents:[
             { type:'text', text:`H.R燈藝｜員工打卡｜${name}`, size:'sm', weight:'bold', color:'#374151', wrap:true },
             { type:'separator', margin:'md', color:'#E5E7EB' },
+
             { type:'text', text:titleLine, size:'xxl', weight:'bold', color:'#111827', wrap:true },
-            { type:'box', layout:'baseline', spacing:'sm', contents:[
-              { type:'text', text:'日期', size:'sm', color:'#6B7280', flex:3 },
-              { type:'text', text:dateStr, size:'sm', color:'#111827', flex:7, align:'end', wrap:true }
-            ]}
+            { type:'separator', margin:'md', color:'#E5E7EB' },
+
+            rowText('日期', dateStr, '#111827'),
+            rowText('時間', timeStr, '#111827'),
+            rowText('距離', distText, '#111827'),
+            rowChipRight('狀態', statusChip)
           ]
         },
         footer:{
@@ -413,15 +458,16 @@ async function postClock(action){
         return;
       }
 
-      // 本地時間（按下當下）
+      // 按下當下時間（用於 fallback local flex）
       const when = new Date();
       const hhmm = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}`;
       const dateStr = `${when.getFullYear()}-${String(when.getMonth()+1).padStart(2,'0')}-${String(when.getDate()).padStart(2,'0')}`;
+      const timeStr = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}:${String(when.getSeconds()).padStart(2,'0')}`;
 
-      // 名字：用 profile.displayName（也可改成你後端的 display_name）
-      const name = String(profile.displayName || '').trim() || '員工';
+      const name = (window.__empDisplayName && String(window.__empDisplayName).trim())
+        ? String(window.__empDisplayName).trim()
+        : String(profile.displayName || '').trim() || '員工';
 
-      // ✅ 背景寫入（不等待 /api/clock 回應）
       const payload = {
         action: act,
         userId: profile.userId,
@@ -431,22 +477,61 @@ async function postClock(action){
         device: navigator.userAgent || '',
         note: ''
       };
-      queueClockWrite_(payload);
 
-      // ✅ 先發送本地 Flex（快速）
-      const localFlex = buildLocalFlex_(act, name, hhmm, dateStr);
-      const msg1 = normalizeFlexMessage_(localFlex);
+      // ✅ 嘗試拿「後端正式 flex」，但最多只等 0.7 秒（兼顧一致外觀與速度）
+      let serverFlex = null;
+      let wroteByServer = false;
 
       try{
-        await liff.sendMessages([msg1]);
+        const controller = new AbortController();
+        const timer = setTimeout(()=>controller.abort(), 700);
+
+        const resp = await fetch('/api/clock', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+
+        clearTimeout(timer);
+
+        const data = await resp.json().catch(()=>null);
+        if(data && data.ok && data.flex){
+          serverFlex = data.flex;
+          wroteByServer = true;
+        }else if(data && data.ok && !data.flex){
+          // 後端 ok 但沒回 flex：也當作寫入完成，改用 local flex
+          wroteByServer = true;
+        }else if(data && !data.ok){
+          // 後端拒絕（例如重複 IN/OUT 等）：直接顯示訊息，不送 flex
+          setStatus('bad', data.message || '打卡失敗');
+          btnIn.disabled = false;
+          btnOut.disabled = false;
+          showCloseBtn();
+          return;
+        }
+      }catch(e){
+        // timeout/abort 或網路：忽略，走 fallback
+      }
+
+      // 若後端沒在 0.7 秒內處理完，就用 beacon/keepalive 背景寫入（不等待）
+      if(!wroteByServer){
+        queueClockWrite_(payload);
+      }
+
+      // ✅ 選用要送的 flex：有 serverFlex 用它（外觀完全一致）；否則用 localFlex（速度優先）
+      const toSend = serverFlex ? serverFlex : buildLocalFlex_(act, name, hhmm, dateStr, timeStr);
+      const msg = (typeof normalizeFlexMessage_ === 'function') ? normalizeFlexMessage_(toSend) : toSend;
+
+      // 送出（保留降級重試）
+      try{
+        await liff.sendMessages([msg]);
       }catch(e1){
-        // 降級：去 footer
-        const msg2 = stripFooter_(msg1);
         try{
+          const msg2 = (typeof stripFooter_ === 'function') ? stripFooter_(msg) : msg;
           await liff.sendMessages([msg2]);
         }catch(e2){
-          // 最低保險
-          const msg3 = minimalFlex_();
+          const msg3 = (typeof minimalFlex_ === 'function') ? minimalFlex_() : {type:'text', text:'打卡成功'};
           await liff.sendMessages([msg3]);
         }
       }
