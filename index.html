@@ -119,6 +119,7 @@
   </div>
 
 <script>
+  // ===== 基本設定 =====
   const LIFF_ID = "2008810311-jmqyUaTN";
 
   // 店家座標（前端計算距離用）
@@ -126,10 +127,17 @@
   const SHOP_LNG = 121.2242778;
   const FENCE_M  = 500; // 圍欄半徑（公尺），請與 GS 的 GEOFENCE_METERS 一致
 
-  const el = (id)=>document.getElementById(id);
-  const tabClock = el('tabClock'), tabSchedule = el('tabSchedule');
-  const panelClock = el('panelClock'), panelSchedule = el('panelSchedule');
+  const BACKEND_TIMEOUT_MS = 700; // 0.7 秒內拿得到後端就用後端 flex；否則走 fallback
 
+  const el = (id)=>document.getElementById(id);
+
+  // Tabs / Panels
+  const tabClock = el('tabClock');
+  const tabSchedule = el('tabSchedule');
+  const panelClock = el('panelClock');
+  const panelSchedule = el('panelSchedule');
+
+  // UI elements
   const pillLogin = el('pillLogin');
   const pillGps = el('pillGps');
   const helloEl = el('hello');
@@ -147,15 +155,17 @@
   const scheduleStatus = el('scheduleStatus');
   const scheduleList = el('scheduleList');
 
+  const btnIn = el('btnIn');
+  const btnOut = el('btnOut');
+
+  // Runtime state
   let profile = null;
   let lastPos = null;
   let lastDistM = null;
+  let currentState = 'UNKNOWN'; // EMPTY/OFF/IN/UNKNOWN
+  window.__empDisplayName = '';
 
-  let currentMonth = (() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-  })();
-
+  // ===== UI helpers =====
   function setTab(which){
     if(which==='clock'){
       tabClock.classList.add('active'); tabSchedule.classList.remove('active');
@@ -180,83 +190,35 @@
   function showCloseBtn(){ btnClose.style.display = 'block'; }
   btnClose.addEventListener('click', ()=>{ try{ liff.closeWindow(); }catch(e){} });
 
+  function setStateUI(state){
+    const s = String(state||'UNKNOWN').toUpperCase();
+    currentState = s;
+    if (s === 'IN'){
+      // 上班中：只能 OUT
+      btnIn.disabled = true;
+      btnOut.disabled = false;
+      return;
+    }
+    // EMPTY / OFF / UNKNOWN：只能 IN
+    btnIn.disabled = false;
+    btnOut.disabled = true;
+  }
+
   function tickClock(){
     const d = new Date();
     clockEl.textContent = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   }
   setInterval(tickClock, 1000); tickClock();
 
-  async function init(){
-    try{
-      await liff.init({ liffId: LIFF_ID });
-
-      try{
-        clientText.textContent = (liff.isInClient && liff.isInClient()) ? 'LINE內（可關閉）' : '非LINE內（不可自動關閉）';
-      }catch(e){ clientText.textContent='未知'; }
-
-      if(!liff.isLoggedIn()){
-        pillLogin.textContent='未登入';
-        if(!liff.isInClient || !liff.isInClient()){
-          setStatus('warn','請用 LINE 內開啟此頁面（LIFF）。');
-          showCloseBtn();
-          return;
-        }
-        setStatus('warn','請先登入 LINE 才能打卡。');
-        liff.login(); return;
-      }
-
-      profile = await liff.getProfile();
-
-      // ✅ 使用員工註冊名（避免用 LINE 暱稱）
-      window.__empDisplayName = getEmpNameCached_();
-      // 背景更新一次，不阻塞
-      fetchEmpDisplayName_(1200).then(n=>{
-        if(n){
-          window.__empDisplayName = n;
-          setEmpNameCached_(n);
-        }
-      });
-      pillLogin.textContent='已登入';
-      helloEl.textContent = `嗨 ${profile.displayName}，請先取得定位後再打卡。`;
-      uidText.textContent = profile.userId || '--';
-      btnCopyId.style.display = profile.userId ? 'block' : 'none';
-
-      setStatus('', '正在取得定位…');
-      await getGps();
-
-      monthLabel.textContent = currentMonth;
-      btnPrev.addEventListener('click', ()=> changeMonth(-1));
-      btnNext.addEventListener('click', ()=> changeMonth(1));
-
-    }catch(err){
-      setStatus('bad','初始化失敗：' + (err && err.message ? err.message : err));
-      showCloseBtn();
-    }
+  function fmtErr_(e){
+    const code = (e && (e.code ?? e.status)) ? (e.code ?? e.status) : '';
+    const msg  = e && e.message ? e.message : String(e || '');
+    let raw = '';
+    try{ raw = JSON.stringify(e); }catch(_){}
+    return (code ? `CODE:${code} ` : '') + msg + (raw ? `\nraw=${raw}` : '');
   }
 
-  function getGps(){
-    return new Promise((resolve)=>{
-      navigator.geolocation.getCurrentPosition(
-        pos=>{
-          lastPos=pos;
-          pillGps.textContent='定位已取得';
-          lastDistM = haversineMeters_(SHOP_LAT, SHOP_LNG, pos.coords.latitude, pos.coords.longitude);
-          distText.textContent = formatDistText_(lastDistM);
-          setStatus('ok','定位成功，可以打卡。');
-          resolve(pos);
-        },
-        ()=>{
-          pillGps.textContent='定位失敗';
-          setStatus('bad','定位失敗：請允許定位權限後再試一次。');
-          showCloseBtn();
-          resolve(null);
-        },
-        { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
-      );
-    });
-  }
-
-
+  // ===== 距離計算 =====
   function haversineMeters_(lat1, lng1, lat2, lng2){
     const R = 6371000;
     const toRad = (x)=>x*Math.PI/180;
@@ -266,109 +228,89 @@
     const c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R*c;
   }
-
   function formatDistText_(distM){
     const d = Math.round(distM);
     const inRange = d <= FENCE_M;
     return `${d}m / ${FENCE_M}m（${inRange ? '範圍內' : '超出'}）`;
   }
-  // ===== Flex sanitize (避免 LIFF sendMessages 400/INVALID_MESSAGE) =====
-  function fmtErr_(e){
-    const code = (e && (e.code ?? e.status)) ? (e.code ?? e.status) : '';
-    const msg  = e && e.message ? e.message : String(e || '');
-    let raw = '';
-    try{ raw = JSON.stringify(e); }catch(_){}
-    return (code ? `CODE:${code} ` : '') + msg + (raw ? `\nraw=${raw}` : '');
+
+  function getGps(){
+    return new Promise((resolve)=>{
+      navigator.geolocation.getCurrentPosition(
+        pos=>{
+          lastPos = pos;
+          lastDistM = haversineMeters_(SHOP_LAT, SHOP_LNG, pos.coords.latitude, pos.coords.longitude);
+          pillGps.textContent='定位已取得';
+          distText.textContent = formatDistText_(lastDistM);
+          resolve(pos);
+        },
+        ()=>{
+          lastPos = null;
+          lastDistM = null;
+          pillGps.textContent='定位失敗';
+          distText.textContent = '未取得';
+          resolve(null);
+        },
+        { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
+      );
+    });
   }
 
-  // 移除 LIFF 可能拒絕的元件/屬性：filler、flex、paddingStart/paddingEnd、bubble.size
-  function sanitizeFlex_(obj){
-    if (obj === null || obj === undefined) return obj;
-
-    if (Array.isArray(obj)){
-      const out = [];
-      for (const x of obj){
-        const y = sanitizeFlex_(x);
-        if (y === null) continue;
-        out.push(y);
+  // ===== 員工名稱（display_name） =====
+  function getEmpNameCached_(){
+    try{ return localStorage.getItem('empDisplayName') || ''; }catch(e){ return ''; }
+  }
+  function setEmpNameCached_(name){
+    try{ localStorage.setItem('empDisplayName', String(name||'')); }catch(e){}
+  }
+  async function fetchEmpDisplayName_(timeoutMs){
+    if(!profile || !profile.userId) return '';
+    try{
+      const controller = new AbortController();
+      const timer = setTimeout(()=>controller.abort(), timeoutMs || 250);
+      const resp = await fetch('/api/clock', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'STATUS', userId: profile.userId }),
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+      const data = await resp.json().catch(()=>null);
+      if(data && data.ok && data.display_name){
+        return String(data.display_name).trim();
       }
-      return out;
-    }
-
-    if (typeof obj === 'object'){
-      if (obj.type === 'filler') return null;
-
-      const out = {};
-      for (const [k,v] of Object.entries(obj)){
-                if (k === 'paddingStart' || k === 'paddingEnd') continue;
-        if (k === 'size' && obj.type === 'bubble') continue; // bubble size 拿掉更穩
-        out[k] = sanitizeFlex_(v);
-      }
-      return out;
-    }
-
-    return obj;
+    }catch(e){}
+    return '';
   }
 
-  function normalizeFlexMessage_(flex){
-    let obj = flex;
-
-    // 後端如果回 stringified JSON
-    if (typeof obj === 'string'){
-      try{ obj = JSON.parse(obj); }catch(_){}
-    }
-
-    // 後端若只回 bubble
-    if (obj && obj.type === 'bubble'){
-      obj = { type:'flex', altText:'打卡系統', contents: obj };
-    }
-
-    // 確保 altText
-    if (obj && obj.type === 'flex' && !obj.altText) obj.altText = '打卡系統';
-
-    // deep clone
-    try{ obj = JSON.parse(JSON.stringify(obj)); }catch(_){}
-
-    // sanitize
-    obj = sanitizeFlex_(obj);
-
-    return obj;
-  }
-
-  function clone_(x){
-    try{ return JSON.parse(JSON.stringify(x)); }catch(_){ return x; }
-  }
-
-  // 進一步降級：移除 footer
-  function stripFooter_(msg){
-    const o = clone_(msg);
-    if (o && o.type==='flex' && o.contents && o.contents.type==='bubble'){
-      delete o.contents.footer;
-    }
-    return o;
-  }
-
-  // 最低保險：超簡 flex（只留 body 一句話）
-  function minimalFlex_(){
-    return {
-      type:'flex',
-      altText:'打卡成功',
-      contents:{
-        type:'bubble',
-        body:{
-          type:'box',
-          layout:'vertical',
-          contents:[{ type:'text', text:'打卡成功', weight:'bold', size:'lg' }]
+  // ===== 後端狀態同步（也順便拿 display_name）=====
+  async function refreshState(){
+    if(!profile || !profile.userId) return;
+    try{
+      const resp = await fetch('/api/clock', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'STATUS', userId: profile.userId })
+      });
+      const data = await resp.json().catch(()=>null);
+      if(data && data.ok){
+        if(data.state) setStateUI(data.state);
+        if(data.display_name){
+          const dn = String(data.display_name).trim();
+          if(dn){
+            window.__empDisplayName = dn;
+            setEmpNameCached_(dn);
+          }
         }
+      }else{
+        setStateUI('OFF');
       }
-    };
+    }catch(e){
+      setStateUI('OFF');
+    }
   }
 
-  let lastFlexDebug_ = '';
-  const btnCopyFlexDebug_ = document.getElementById('btnCopyId'); // reuse existing button
-
-
-    // ✅ 背景送出打卡（不等待後端回應）
+  // ===== 背景寫入 =====
   function queueClockWrite_(payload){
     try{
       if (navigator.sendBeacon){
@@ -389,37 +331,53 @@
     return false;
   }
 
+  // ===== Flex sanitize =====
+  function sanitizeFlex_(obj){
+    if (obj === null || obj === undefined) return obj;
 
-  // ✅ 取得員工註冊名稱（employees.display_name）
-  async function fetchEmpDisplayName_(timeoutMs){
-    try{
-      const controller = new AbortController();
-      const timer = setTimeout(()=>controller.abort(), timeoutMs || 1200);
-      const resp = await fetch('/api/clock', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'STATUS', userId: profile.userId }),
-        signal: controller.signal
-      });
-      clearTimeout(timer);
-      const data = await resp.json().catch(()=>null);
-      if(data && data.ok && data.display_name){
-        return String(data.display_name).trim();
+    if (Array.isArray(obj)){
+      const out = [];
+      for (const x of obj){
+        const y = sanitizeFlex_(x);
+        if (y === null) continue;
+        out.push(y);
       }
-    }catch(e){}
-    return '';
+      return out;
+    }
+
+    if (typeof obj === 'object'){
+      if (obj.type === 'filler') return null;
+
+      const out = {};
+      for (const [k,v] of Object.entries(obj)){
+        // 移除較常被 LIFF 嚴格驗證挑出的屬性
+        if (k === 'paddingStart' || k === 'paddingEnd') continue;
+        if (k === 'size' && obj.type === 'bubble') continue;
+        out[k] = sanitizeFlex_(v);
+      }
+      return out;
+    }
+
+    return obj;
   }
 
-  function getEmpNameCached_(){
-    try{
-      const n = localStorage.getItem('empDisplayName') || '';
-      return String(n||'').trim();
-    }catch(e){ return ''; }
+  function normalizeFlexMessage_(flex){
+    let obj = flex;
+
+    if (typeof obj === 'string'){
+      try{ obj = JSON.parse(obj); }catch(_){}
+    }
+    if (obj && obj.type === 'bubble'){
+      obj = { type:'flex', altText:'打卡系統', contents: obj };
+    }
+    if (obj && obj.type === 'flex' && !obj.altText) obj.altText = '打卡系統';
+
+    try{ obj = JSON.parse(JSON.stringify(obj)); }catch(_){}
+    obj = sanitizeFlex_(obj);
+    return obj;
   }
-  function setEmpNameCached_(name){
-    try{ localStorage.setItem('empDisplayName', String(name||'')); }catch(e){}
-  }
-  // ✅ 產生「本地 Flex」（安全版，避免 400；不含 filler、不含 bubble.size）
+
+  // ===== fallback Flex（本地）=====
   function buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distM){
     const titleLine = (act==='IN' ? '上班打卡 ' : '下班打卡 ') + hhmm;
 
@@ -470,7 +428,7 @@
       altText:'打卡成功',
       contents:{
         type:'bubble',
-        styles:{ body:{ backgroundColor:'#FFFFFF' }, footer:{ backgroundColor:'#FFFFFF' } },
+        styles:{ body:{backgroundColor:'#FFFFFF'}, footer:{backgroundColor:'#FFFFFF'} },
         body:{
           type:'box',
           layout:'vertical',
@@ -479,10 +437,8 @@
           contents:[
             { type:'text', text:`H.R燈藝｜員工打卡｜${name}`, size:'sm', weight:'bold', color:'#374151', wrap:true },
             { type:'separator', margin:'md', color:'#E5E7EB' },
-
             { type:'text', text:titleLine, size:'xxl', weight:'bold', color:'#111827', wrap:true },
             { type:'separator', margin:'md', color:'#E5E7EB' },
-
             rowText('日期', dateStr, '#111827'),
             rowText('時間', timeStr, '#111827'),
             rowText('距離', distText, distColor),
@@ -501,19 +457,28 @@
     };
   }
 
-async function postClock(action){
+  // ===== 打卡送出（0.7s 優先後端，超時 fallback）=====
+  async function postClock(action){
     try{
       if(!profile) throw new Error('尚未登入');
 
       const act = String(action||'').toUpperCase();
       if(act !== 'IN' && act !== 'OUT') throw new Error('無效動作');
 
-      // 立即 UI 回饋
+      // 前端狀態先擋（減少重複）
+      if(act==='IN' && currentState==='IN'){
+        setStatus('warn','你目前已在上班中（請先打下班卡 OUT）');
+        return;
+      }
+      if(act==='OUT' && currentState!=='IN'){
+        setStatus('warn','你目前未上班/已下班（請先打上班卡 IN）');
+        return;
+      }
+
       setStatus('', '送出打卡中…');
       btnIn.disabled = true;
       btnOut.disabled = true;
 
-      // GPS（必要）
       if(!lastPos) await getGps();
       if(!lastPos){
         setStatus('bad','定位未取得，請允許定位後再打卡。');
@@ -523,34 +488,33 @@ async function postClock(action){
         return;
       }
 
-      // 按下當下時間（用於 fallback local flex）
-      const when = new Date();
-      const hhmm = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}`;
-      const dateStr = `${when.getFullYear()}-${String(when.getMonth()+1).padStart(2,'0')}-${String(when.getDate()).padStart(2,'0')}`;
-      const timeStr = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}:${String(when.getSeconds()).padStart(2,'0')}`;
+      // 即時距離範圍檢查
+      const distM = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, lastPos.coords.latitude, lastPos.coords.longitude);
+      if(Math.round(distM) > FENCE_M){
+        setStatus('bad', `不在打卡範圍內（${formatDistText_(distM)}）`);
+        btnIn.disabled = false;
+        btnOut.disabled = false;
+        showCloseBtn();
+        return;
+      }
 
-      // 員工註冊名（避免用 LINE 暱稱）
-      let name = (window.__empDisplayName && String(window.__empDisplayName).trim()) ? String(window.__empDisplayName).trim() : getEmpNameCached_();
-      if(!name){
-        const n = await fetchEmpDisplayName_(300);
+      // 名字：優先用註冊名
+      let empName = (window.__empDisplayName && String(window.__empDisplayName).trim()) ? String(window.__empDisplayName).trim() : getEmpNameCached_();
+      if(!empName){
+        const n = await fetchEmpDisplayName_(250);
         if(n){
-          name = n;
+          empName = n;
           window.__empDisplayName = n;
           setEmpNameCached_(n);
         }
       }
-      if(!name) name = '員工';
+      if(!empName) empName = '員工';
 
-      // 前端距離（fallback 用）
-      const distM = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, payload.lat, payload.lng);
-      // 前端計算距離（fallback 本地 Flex 用）
-      const distM = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, payload.lat, payload.lng);
-      const distText = formatDistText_(distM);
-      const statusText = (act === 'IN') ? '上班' : '下班';
-  
-      const name = (window.__empDisplayName && String(window.__empDisplayName).trim())
-        ? String(window.__empDisplayName).trim()
-        : String(profile.displayName || '').trim() || '員工';
+      // 按下當下時間
+      const when = new Date();
+      const hhmm = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}`;
+      const dateStr = `${when.getFullYear()}-${String(when.getMonth()+1).padStart(2,'0')}-${String(when.getDate()).padStart(2,'0')}`;
+      const timeStr = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}:${String(when.getSeconds()).padStart(2,'0')}`;
 
       const payload = {
         action: act,
@@ -562,71 +526,68 @@ async function postClock(action){
         note: ''
       };
 
-      // ✅ 嘗試拿「後端正式 flex」，但最多只等 0.7 秒（兼顧一致外觀與速度）
+      // 嘗試後端（0.7 秒）
+      let serverData = null;
       let serverFlex = null;
-      let wroteByServer = false;
-
       try{
         const controller = new AbortController();
-        const timer = setTimeout(()=>controller.abort(), 700);
-
+        const timer = setTimeout(()=>controller.abort(), BACKEND_TIMEOUT_MS);
         const resp = await fetch('/api/clock', {
           method:'POST',
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify(payload),
           signal: controller.signal
         });
-
         clearTimeout(timer);
+        serverData = await resp.json().catch(()=>null);
 
-        const data = await resp.json().catch(()=>null);
-        if(data && data.ok && data.display_name){ window.__empDisplayName = String(data.display_name).trim(); setEmpNameCached_(window.__empDisplayName); }
-        if(data && data.ok && data.flex){
-          serverFlex = data.flex;
-          wroteByServer = true;
-        }else if(data && data.ok && !data.flex){
-          // 後端 ok 但沒回 flex：也當作寫入完成，改用 local flex
-          wroteByServer = true;
-        }else if(data && !data.ok){
-          // 後端拒絕（例如重複 IN/OUT 等）：直接顯示訊息，不送 flex
-          setStatus('bad', data.message || '打卡失敗');
+        if(serverData && serverData.ok){
+          serverFlex = serverData.flex || null;
+          if(serverData.display_name){
+            const dn = String(serverData.display_name).trim();
+            if(dn){
+              window.__empDisplayName = dn;
+              setEmpNameCached_(dn);
+              empName = dn;
+            }
+          }
+        }else if(serverData && serverData.ok === false && serverData.message){
+          setStatus('bad', serverData.message);
+          await refreshState();
           btnIn.disabled = false;
           btnOut.disabled = false;
           showCloseBtn();
           return;
         }
       }catch(e){
-        // timeout/abort 或網路：忽略，走 fallback
+        // timeout → fallback
       }
 
-      // 若後端沒在 0.7 秒內處理完，就用 beacon/keepalive 背景寫入（不等待）
-      if(!wroteByServer){
+      if(!serverFlex){
+        // 背景寫入，不等待
         queueClockWrite_(payload);
       }
 
-      // ✅ 選用要送的 flex：有 serverFlex 用它（外觀完全一致）；否則用 localFlex（速度優先）
-      const toSend = serverFlex ? serverFlex : buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distText, statusText);
-      const msg = (typeof normalizeFlexMessage_ === 'function') ? normalizeFlexMessage_(toSend) : toSend;
+      const toSend = serverFlex ? serverFlex : buildLocalFlex_(act, empName, hhmm, dateStr, timeStr, distM);
+      const msg = normalizeFlexMessage_(toSend);
 
-      // 送出（保留降級重試）
       try{
         await liff.sendMessages([msg]);
-      }catch(e1){
-        try{
-          const msg2 = (typeof stripFooter_ === 'function') ? stripFooter_(msg) : msg;
-          await liff.sendMessages([msg2]);
-        }catch(e2){
-          const msg3 = (typeof minimalFlex_ === 'function') ? minimalFlex_() : {type:'text', text:'打卡成功'};
-          await liff.sendMessages([msg3]);
-        }
+      }catch(e){
+        setStatus('warn', 'Flex 發送失敗：' + fmtErr_(e));
+        await refreshState();
+        btnIn.disabled = false;
+        btnOut.disabled = false;
+        showCloseBtn();
+        return;
       }
 
-      // ✅ 送出就關閉
       try{
         liff.closeWindow();
         return;
       }catch(e){
         setStatus('ok', 'Flex 已送出 ✅（若未自動關閉，請按「關閉視窗」）');
+        await refreshState();
         btnIn.disabled = false;
         btnOut.disabled = false;
         showCloseBtn();
@@ -639,8 +600,8 @@ async function postClock(action){
     }
   }
 
-  el('btnIn').addEventListener('click', ()=>postClock('IN'));
-  el('btnOut').addEventListener('click', ()=>postClock('OUT'));
+  btnIn.addEventListener('click', ()=>postClock('IN'));
+  btnOut.addEventListener('click', ()=>postClock('OUT'));
 
   btnCopyId.addEventListener('click', async ()=>{
     try{
@@ -649,6 +610,12 @@ async function postClock(action){
     }catch(e){}
   });
 
+  // ===== schedule（保留原功能）=====
+  let currentMonth = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  })();
+
   function changeMonth(delta){
     const [y,m] = currentMonth.split('-').map(Number);
     const d = new Date(y, m-1 + delta, 1);
@@ -656,6 +623,9 @@ async function postClock(action){
     monthLabel.textContent = currentMonth;
     if(profile && profile.userId) loadSchedule(currentMonth);
   }
+  btnPrev.addEventListener('click', ()=> changeMonth(-1));
+  btnNext.addEventListener('click', ()=> changeMonth(1));
+
   function fmtSegs(segs){
     if(!segs || !segs.length) return '—';
     return segs.map(s=>`${s.start}-${s.end}`).join(' / ');
@@ -695,6 +665,64 @@ async function postClock(action){
       if(items.length===0) setScheduleStatus('warn', '這個月沒有班表資料（或你尚未同步排班）');
     }catch(err){
       setScheduleStatus('bad', '班表載入失敗：' + (err && err.message ? err.message : err));
+    }
+  }
+
+  // ===== init =====
+  async function init(){
+    try{
+      await liff.init({ liffId: LIFF_ID });
+
+      try{
+        clientText.textContent = (liff.isInClient && liff.isInClient()) ? 'LINE內（可關閉）' : '非LINE內（不可自動關閉）';
+      }catch(e){ clientText.textContent='未知'; }
+
+      if(!liff.isLoggedIn()){
+        pillLogin.textContent='未登入';
+        if(!liff.isInClient || !liff.isInClient()){
+          setStatus('warn','請用 LINE 內開啟此頁面（LIFF）。');
+          showCloseBtn();
+          return;
+        }
+        setStatus('warn','請先登入 LINE 才能打卡。');
+        liff.login(); return;
+      }
+
+      profile = await liff.getProfile();
+      pillLogin.textContent='已登入';
+      uidText.textContent = profile.userId || '--';
+
+      // 優先用註冊名，不顯示 LINE 暱稱
+      window.__empDisplayName = getEmpNameCached_();
+      // 背景更新一次（不阻塞）
+      fetchEmpDisplayName_(250).then(n=>{
+        if(n){
+          window.__empDisplayName = n;
+          setEmpNameCached_(n);
+          // 更新 hello 文案
+          helloEl.textContent = `嗨 ${n}，請先取得定位後再打卡。`;
+        }
+      });
+
+      helloEl.textContent = `嗨 ${(window.__empDisplayName || '員工')}，請先取得定位後再打卡。`;
+
+      monthLabel.textContent = currentMonth;
+
+      // 先同步狀態（也會順便更新 display_name）
+      setStateUI('UNKNOWN');
+      setStatus('', '讀取狀態中…');
+      await refreshState();
+      setStatus('ok', '狀態已更新，可以打卡。');
+
+      // 定位背景抓（不阻塞）
+      getGps();
+
+      // Copy button
+      btnCopyId.style.display = (profile.userId ? 'block' : 'none');
+
+    }catch(err){
+      setStatus('bad','初始化失敗：' + fmtErr_(err));
+      showCloseBtn();
     }
   }
 
