@@ -487,6 +487,7 @@ async function postClock(action){
       // 前端計算距離（fallback 本地 Flex 用）
       const distM = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, payload.lat, payload.lng);
       const distText = formatDistText_(distM);
+      const statusText = (act === 'IN') ? '上班' : '下班';
   
       const name = (window.__empDisplayName && String(window.__empDisplayName).trim())
         ? String(window.__empDisplayName).trim()
