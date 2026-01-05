@@ -207,13 +207,13 @@
 
       profile = await liff.getProfile();
 
-      // ✅ 優先顯示/使用員工註冊名稱（避免用 LINE 暱稱）
-      window.__empDisplayName = localStorage.getItem('empDisplayName') || '';
-      // 背景更新一次（不阻塞）
-      fetchEmpDisplayName_(250).then(n=>{
+      // ✅ 使用員工註冊名（避免用 LINE 暱稱）
+      window.__empDisplayName = getEmpNameCached_();
+      // 背景更新一次，不阻塞
+      fetchEmpDisplayName_(1200).then(n=>{
         if(n){
           window.__empDisplayName = n;
-          localStorage.setItem('empDisplayName', n);
+          setEmpNameCached_(n);
         }
       });
       pillLogin.textContent='已登入';
@@ -390,11 +390,11 @@
   }
 
 
-  // ✅ 取得員工註冊名稱（employees.display_name）：短等待，不阻塞 UI
+  // ✅ 取得員工註冊名稱（employees.display_name）
   async function fetchEmpDisplayName_(timeoutMs){
     try{
       const controller = new AbortController();
-      const timer = setTimeout(()=>controller.abort(), timeoutMs || 250);
+      const timer = setTimeout(()=>controller.abort(), timeoutMs || 1200);
       const resp = await fetch('/api/clock', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -409,10 +409,28 @@
     }catch(e){}
     return '';
   }
+
+  function getEmpNameCached_(){
+    try{
+      const n = localStorage.getItem('empDisplayName') || '';
+      return String(n||'').trim();
+    }catch(e){ return ''; }
+  }
+  function setEmpNameCached_(name){
+    try{ localStorage.setItem('empDisplayName', String(name||'')); }catch(e){}
+  }
   // ✅ 產生「本地 Flex」（安全版，避免 400；不含 filler、不含 bubble.size）
-  function buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distText, statusText){
-    // 本地 fallback：版面盡量貼近「正式 Flex」(白底 + 分隔線 + 欄位列 + 狀態徽章 + 黑色按鈕)
+  function buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distM){
     const titleLine = (act==='IN' ? '上班打卡 ' : '下班打卡 ') + hhmm;
+
+    const d = Math.round(Number(distM || 0));
+    const inRange = d <= FENCE_M;
+    const distText = `${d}m / ${FENCE_M}m（${inRange ? '範圍內' : '超出'}）`;
+    const distColor = inRange ? '#166534' : '#B91C1C';
+
+    const statusText = (act==='IN') ? '上班' : '下班';
+    const statusBg = (act==='IN') ? '#DCFCE7' : '#E5E7EB';
+    const statusColor = (act==='IN') ? '#166534' : '#111827';
 
     const rowText = (label, value, valueColor) => ({
       type: 'box',
@@ -427,12 +445,12 @@
     const statusChip = {
       type: 'box',
       layout: 'vertical',
-      backgroundColor: '#E5E7EB',
+      backgroundColor: statusBg,
       cornerRadius: '999px',
       paddingAll: '4px',
       flex: 0,
       contents: [
-        { type: 'text', text: statusText, size: 'xs', weight: 'bold', color: '#111827', wrap: false }
+        { type: 'text', text: statusText, size: 'xs', weight: 'bold', color: statusColor, wrap: false }
       ]
     };
 
@@ -447,16 +465,12 @@
       ]
     });
 
-
     return {
       type:'flex',
       altText:'打卡成功',
       contents:{
         type:'bubble',
-        styles:{
-          body:{ backgroundColor:'#FFFFFF' },
-          footer:{ backgroundColor:'#FFFFFF' }
-        },
+        styles:{ body:{ backgroundColor:'#FFFFFF' }, footer:{ backgroundColor:'#FFFFFF' } },
         body:{
           type:'box',
           layout:'vertical',
@@ -471,7 +485,7 @@
 
             rowText('日期', dateStr, '#111827'),
             rowText('時間', timeStr, '#111827'),
-            rowText('距離', distText, '#111827'),
+            rowText('距離', distText, distColor),
             rowChipRight('狀態', statusChip)
           ]
         },
@@ -514,21 +528,29 @@ async function postClock(action){
       const hhmm = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}`;
       const dateStr = `${when.getFullYear()}-${String(when.getMonth()+1).padStart(2,'0')}-${String(when.getDate()).padStart(2,'0')}`;
       const timeStr = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}:${String(when.getSeconds()).padStart(2,'0')}`;
+
+      // 員工註冊名（避免用 LINE 暱稱）
+      let name = (window.__empDisplayName && String(window.__empDisplayName).trim()) ? String(window.__empDisplayName).trim() : getEmpNameCached_();
+      if(!name){
+        const n = await fetchEmpDisplayName_(300);
+        if(n){
+          name = n;
+          window.__empDisplayName = n;
+          setEmpNameCached_(n);
+        }
+      }
+      if(!name) name = '員工';
+
+      // 前端距離（fallback 用）
+      const distM = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, payload.lat, payload.lng);
       // 前端計算距離（fallback 本地 Flex 用）
       const distM = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, payload.lat, payload.lng);
       const distText = formatDistText_(distM);
       const statusText = (act === 'IN') ? '上班' : '下班';
   
-            let name = (window.__empDisplayName && String(window.__empDisplayName).trim()) ? String(window.__empDisplayName).trim() : '';
-      if(!name){
-        const n = await fetchEmpDisplayName_(250);
-        if(n){
-          name = n;
-          window.__empDisplayName = n;
-          localStorage.setItem('empDisplayName', n);
-        }
-      }
-      if(!name) name = '員工';
+      const name = (window.__empDisplayName && String(window.__empDisplayName).trim())
+        ? String(window.__empDisplayName).trim()
+        : String(profile.displayName || '').trim() || '員工';
 
       const payload = {
         action: act,
@@ -558,6 +580,7 @@ async function postClock(action){
         clearTimeout(timer);
 
         const data = await resp.json().catch(()=>null);
+        if(data && data.ok && data.display_name){ window.__empDisplayName = String(data.display_name).trim(); setEmpNameCached_(window.__empDisplayName); }
         if(data && data.ok && data.flex){
           serverFlex = data.flex;
           wroteByServer = true;
