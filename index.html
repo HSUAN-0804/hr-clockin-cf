@@ -207,19 +207,15 @@
 
       profile = await liff.getProfile();
 
-      // ✅ 顯示員工註冊名稱（employees.display_name），避免用 LINE 暱稱
+      // ✅ 優先顯示/使用員工註冊名稱（避免用 LINE 暱稱）
       window.__empDisplayName = localStorage.getItem('empDisplayName') || '';
-      // 背景查一次 STATUS 取得 display_name（不阻塞畫面）
-      fetch('/api/clock', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'STATUS', userId: profile.userId })
-      }).then(r=>r.json()).then(d=>{
-        if(d && d.ok && d.display_name){
-          window.__empDisplayName = String(d.display_name).trim();
-          localStorage.setItem('empDisplayName', window.__empDisplayName);
+      // 背景更新一次（不阻塞）
+      fetchEmpDisplayName_(250).then(n=>{
+        if(n){
+          window.__empDisplayName = n;
+          localStorage.setItem('empDisplayName', n);
         }
-      }).catch(()=>{});
+      });
       pillLogin.textContent='已登入';
       helloEl.textContent = `嗨 ${profile.displayName}，請先取得定位後再打卡。`;
       uidText.textContent = profile.userId || '--';
@@ -282,8 +278,7 @@
     const msg  = e && e.message ? e.message : String(e || '');
     let raw = '';
     try{ raw = JSON.stringify(e); }catch(_){}
-    return (code ? `CODE:${code} ` : '') + msg + (raw ? `
-raw=${raw}` : '');
+    return (code ? `CODE:${code} ` : '') + msg + (raw ? `\nraw=${raw}` : '');
   }
 
   // 移除 LIFF 可能拒絕的元件/屬性：filler、flex、paddingStart/paddingEnd、bubble.size
@@ -394,19 +389,30 @@ raw=${raw}` : '');
     return false;
   }
 
+
+  // ✅ 取得員工註冊名稱（employees.display_name）：短等待，不阻塞 UI
+  async function fetchEmpDisplayName_(timeoutMs){
+    try{
+      const controller = new AbortController();
+      const timer = setTimeout(()=>controller.abort(), timeoutMs || 250);
+      const resp = await fetch('/api/clock', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'STATUS', userId: profile.userId }),
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+      const data = await resp.json().catch(()=>null);
+      if(data && data.ok && data.display_name){
+        return String(data.display_name).trim();
+      }
+    }catch(e){}
+    return '';
+  }
   // ✅ 產生「本地 Flex」（安全版，避免 400；不含 filler、不含 bubble.size）
-  function buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distM){
-    // 本地 fallback：版面貼近正式版，且距離/狀態顏色正確
+  function buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distText, statusText){
+    // 本地 fallback：版面盡量貼近「正式 Flex」(白底 + 分隔線 + 欄位列 + 狀態徽章 + 黑色按鈕)
     const titleLine = (act==='IN' ? '上班打卡 ' : '下班打卡 ') + hhmm;
-
-    const d = Math.round(Number(distM || 0));
-    const inRange = d <= FENCE_M;
-    const distText = `${d}m / ${FENCE_M}m（${inRange ? '範圍內' : '超出'}）`;
-    const distColor = inRange ? '#166534' : '#B91C1C';
-
-    const statusText = (act==='IN') ? '上班' : '下班';
-    const statusBg = (act==='IN') ? '#DCFCE7' : '#E5E7EB';
-    const statusColor = (act==='IN') ? '#166534' : '#111827';
 
     const rowText = (label, value, valueColor) => ({
       type: 'box',
@@ -421,12 +427,12 @@ raw=${raw}` : '');
     const statusChip = {
       type: 'box',
       layout: 'vertical',
-      backgroundColor: statusBg,
+      backgroundColor: '#E5E7EB',
       cornerRadius: '999px',
       paddingAll: '4px',
       flex: 0,
       contents: [
-        { type: 'text', text: statusText, size: 'xs', weight: 'bold', color: statusColor, wrap: false }
+        { type: 'text', text: statusText, size: 'xs', weight: 'bold', color: '#111827', wrap: false }
       ]
     };
 
@@ -440,6 +446,7 @@ raw=${raw}` : '');
         { type: 'box', layout: 'horizontal', flex: 7, justifyContent: 'flex-end', contents: [ chip ] }
       ]
     });
+
 
     return {
       type:'flex',
@@ -464,7 +471,7 @@ raw=${raw}` : '');
 
             rowText('日期', dateStr, '#111827'),
             rowText('時間', timeStr, '#111827'),
-            rowText('距離', distText, distColor),
+            rowText('距離', distText, '#111827'),
             rowChipRight('狀態', statusChip)
           ]
         },
@@ -508,13 +515,20 @@ async function postClock(action){
       const dateStr = `${when.getFullYear()}-${String(when.getMonth()+1).padStart(2,'0')}-${String(when.getDate()).padStart(2,'0')}`;
       const timeStr = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}:${String(when.getSeconds()).padStart(2,'0')}`;
       // 前端計算距離（fallback 本地 Flex 用）
-      const distM = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, lastPos.coords.latitude, lastPos.coords.longitude);
+      const distM = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, payload.lat, payload.lng);
       const distText = formatDistText_(distM);
       const statusText = (act === 'IN') ? '上班' : '下班';
   
-      const name = (window.__empDisplayName && String(window.__empDisplayName).trim())
-        ? String(window.__empDisplayName).trim()
-        : '員工';
+            let name = (window.__empDisplayName && String(window.__empDisplayName).trim()) ? String(window.__empDisplayName).trim() : '';
+      if(!name){
+        const n = await fetchEmpDisplayName_(250);
+        if(n){
+          name = n;
+          window.__empDisplayName = n;
+          localStorage.setItem('empDisplayName', n);
+        }
+      }
+      if(!name) name = '員工';
 
       const payload = {
         action: act,
@@ -568,7 +582,7 @@ async function postClock(action){
       }
 
       // ✅ 選用要送的 flex：有 serverFlex 用它（外觀完全一致）；否則用 localFlex（速度優先）
-      const toSend = serverFlex ? serverFlex : buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distM);
+      const toSend = serverFlex ? serverFlex : buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distText, statusText);
       const msg = (typeof normalizeFlexMessage_ === 'function') ? normalizeFlexMessage_(toSend) : toSend;
 
       // 送出（保留降級重試）
