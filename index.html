@@ -121,6 +121,11 @@
 <script>
   const LIFF_ID = "2008810311-jmqyUaTN";
 
+  // 店家座標（前端計算距離用）
+  const SHOP_LAT = 24.9714585;
+  const SHOP_LNG = 121.2242778;
+  const FENCE_M  = 500; // 圍欄半徑（公尺），請與 GS 的 GEOFENCE_METERS 一致
+
   const el = (id)=>document.getElementById(id);
   const tabClock = el('tabClock'), tabSchedule = el('tabSchedule');
   const panelClock = el('panelClock'), panelSchedule = el('panelSchedule');
@@ -144,6 +149,7 @@
 
   let profile = null;
   let lastPos = null;
+  let lastDistM = null;
 
   let currentMonth = (() => {
     const d = new Date();
@@ -224,7 +230,8 @@
         pos=>{
           lastPos=pos;
           pillGps.textContent='定位已取得';
-          distText.textContent='已取得（由後端判斷圍欄）';
+          lastDistM = haversineMeters_(SHOP_LAT, SHOP_LNG, pos.coords.latitude, pos.coords.longitude);
+          distText.textContent = formatDistText_(lastDistM);
           setStatus('ok','定位成功，可以打卡。');
           resolve(pos);
         },
@@ -239,6 +246,22 @@
     });
   }
 
+
+  function haversineMeters_(lat1, lng1, lat2, lng2){
+    const R = 6371000;
+    const toRad = (x)=>x*Math.PI/180;
+    const dLat = toRad(lat2-lat1);
+    const dLng = toRad(lng2-lng1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+    const c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R*c;
+  }
+
+  function formatDistText_(distM){
+    const d = Math.round(distM);
+    const inRange = d <= FENCE_M;
+    return `${d}m / ${FENCE_M}m（${inRange ? '範圍內' : '超出'}）`;
+  }
   // ===== Flex sanitize (避免 LIFF sendMessages 400/INVALID_MESSAGE) =====
   function fmtErr_(e){
     const code = (e && (e.code ?? e.status)) ? (e.code ?? e.status) : '';
@@ -357,7 +380,7 @@
   }
 
   // ✅ 產生「本地 Flex」（安全版，避免 400；不含 filler、不含 bubble.size）
-  function buildLocalFlex_(act, name, hhmm, dateStr, timeStr){
+  function buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distText, statusText){
     // 本地 fallback：版面盡量貼近「正式 Flex」(白底 + 分隔線 + 欄位列 + 狀態徽章 + 黑色按鈕)
     const titleLine = (act==='IN' ? '上班打卡 ' : '下班打卡 ') + hhmm;
 
@@ -371,7 +394,6 @@
       ]
     });
 
-    const statusText = (act==='IN') ? '上班' : '下班';
     const statusChip = {
       type: 'box',
       layout: 'vertical',
@@ -395,7 +417,6 @@
       ]
     });
 
-    const distText = '—';
 
     return {
       type:'flex',
@@ -463,7 +484,10 @@ async function postClock(action){
       const hhmm = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}`;
       const dateStr = `${when.getFullYear()}-${String(when.getMonth()+1).padStart(2,'0')}-${String(when.getDate()).padStart(2,'0')}`;
       const timeStr = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}:${String(when.getSeconds()).padStart(2,'0')}`;
-
+      // 前端計算距離（fallback 本地 Flex 用）
+      const distM = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, payload.lat, payload.lng);
+      const distText = formatDistText_(distM);
+  
       const name = (window.__empDisplayName && String(window.__empDisplayName).trim())
         ? String(window.__empDisplayName).trim()
         : String(profile.displayName || '').trim() || '員工';
@@ -520,7 +544,7 @@ async function postClock(action){
       }
 
       // ✅ 選用要送的 flex：有 serverFlex 用它（外觀完全一致）；否則用 localFlex（速度優先）
-      const toSend = serverFlex ? serverFlex : buildLocalFlex_(act, name, hhmm, dateStr, timeStr);
+      const toSend = serverFlex ? serverFlex : buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distText, statusText);
       const msg = (typeof normalizeFlexMessage_ === 'function') ? normalizeFlexMessage_(toSend) : toSend;
 
       // 送出（保留降級重試）
