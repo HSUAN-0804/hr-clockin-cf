@@ -282,7 +282,8 @@
     const msg  = e && e.message ? e.message : String(e || '');
     let raw = '';
     try{ raw = JSON.stringify(e); }catch(_){}
-    return (code ? `CODE:${code} ` : '') + msg + (raw ? `\nraw=${raw}` : '');
+    return (code ? `CODE:${code} ` : '') + msg + (raw ? `
+raw=${raw}` : '');
   }
 
   // 移除 LIFF 可能拒絕的元件/屬性：filler、flex、paddingStart/paddingEnd、bubble.size
@@ -395,7 +396,7 @@
 
   // ✅ 產生「本地 Flex」（安全版，避免 400；不含 filler、不含 bubble.size）
   function buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distM){
-    // 本地 fallback：版面貼近正式版，且顯示前端計算的距離（綠/紅）
+    // 本地 fallback：版面貼近正式版，且距離/狀態顏色正確
     const titleLine = (act==='IN' ? '上班打卡 ' : '下班打卡 ') + hhmm;
 
     const d = Math.round(Number(distM || 0));
@@ -507,15 +508,13 @@ async function postClock(action){
       const dateStr = `${when.getFullYear()}-${String(when.getMonth()+1).padStart(2,'0')}-${String(when.getDate()).padStart(2,'0')}`;
       const timeStr = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}:${String(when.getSeconds()).padStart(2,'0')}`;
       // 前端計算距離（fallback 本地 Flex 用）
-      const distM = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, payload.lat, payload.lng);
+      const distM = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, lastPos.coords.latitude, lastPos.coords.longitude);
       const distText = formatDistText_(distM);
       const statusText = (act === 'IN') ? '上班' : '下班';
   
-            const name = (window.__empDisplayName && String(window.__empDisplayName).trim())
+      const name = (window.__empDisplayName && String(window.__empDisplayName).trim())
         ? String(window.__empDisplayName).trim()
-        : String(profile.displayName || '').trim() || '員工';
-        ? String(window.__empDisplayName).trim()
-        : String(profile.displayName || '').trim() || '員工';
+        : '員工';
 
       const payload = {
         action: act,
