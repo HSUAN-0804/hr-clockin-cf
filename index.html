@@ -184,25 +184,6 @@
 
 <script>
   const LIFF_ID = "2008810311-jmqyUaTN";
-
-  // ===== Status cache (localStorage) =====
-  const STATUS_CACHE_TTL_MS = 60 * 1000; // 60 seconds
-  function statusKey_(userId){ return `hr_status_${userId}`; }
-  function loadStatusCache_(userId){
-    try{
-      const raw = localStorage.getItem(statusKey_(userId));
-      if(!raw) return null;
-      const obj = JSON.parse(raw);
-      if(!obj || !obj.ts || !obj.data) return null;
-      if(Date.now() - obj.ts > STATUS_CACHE_TTL_MS) return null;
-      return obj.data;
-    }catch(e){ return null; }
-  }
-  function saveStatusCache_(userId, data){
-    try{
-      localStorage.setItem(statusKey_(userId), JSON.stringify({ts: Date.now(), data}));
-    }catch(e){}
-  }
   // 店家座標（前端計算距離用）
   const SHOP_LAT = 24.9714585;
   const SHOP_LNG = 121.2242778;
@@ -355,10 +336,6 @@
       // cache display name
       if(data && data.ok && data.display_name){
         localStorage.setItem('empDisplayName', String(data.display_name).trim());
-
-      if(data && data.ok){
-        saveStatusCache_(profile.userId, data);
-      }
       }
     }catch(e){
       setStateUI('OFF');
@@ -600,17 +577,9 @@
       getGpsFast();
 
       setStateUI('UNKNOWN');
-      // ✅ 先用 60 秒快取狀態（立即顯示）
-      const cached = loadStatusCache_(profile.userId);
-      if(cached && cached.state){
-        setStateUI(cached.state);
-        setStatus('ok', '狀態（快取）已載入，可以打卡。');
-      }else{
-        setStatus('', '讀取狀態中…');
-      }
-
-      // ✅ 背景更新狀態（不阻塞 UI）
-      refreshState().then(()=>{ setStatus('ok', '狀態已更新，可以打卡。'); }).catch(()=>{});
+      setStatus('', '讀取狀態中…');
+      await refreshState();
+      setStatus('ok', '狀態已更新，可以打卡。');
 
     }catch(err){
       setStatus('bad','初始化失敗');
