@@ -107,102 +107,29 @@
       touch-action: auto;
     }
 
+    /* debug overlay */
+    .debug-overlay{position:fixed;left:10px;right:10px;bottom:10px;max-height:38vh;overflow:auto;background:rgba(0,0,0,.75);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:10px;font-size:12px;line-height:1.35;z-index:99999;display:none;white-space:pre-wrap;}
+
+
     /* ===== Calendar (Mon-Sun) ===== */
-    .calendar-weekdays{
-      display:grid;
-      grid-template-columns:repeat(7,1fr);
-      gap:8px;
-      margin-top:10px;
-      color:rgba(255,255,255,.65);
-      font-weight:800;
-      font-size:12px;
-      user-select:none;
-    }
-    .calendar-weekdays div{ text-align:center; padding:6px 0; }
-
-    .calendar-grid{
-      margin-top:8px;
-      display:grid;
-      grid-template-columns:repeat(7,1fr);
-      gap:8px;
-      max-height: 54vh;
-      overflow-y:auto;
-      -webkit-overflow-scrolling:touch;
-    }
-    .cal-cell{
-      border:1px solid var(--border);
-      border-radius:14px;
-      background:rgba(0,0,0,.22);
-      padding:10px 10px;
-      min-height:74px;
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-    .cal-cell.inactive{ opacity:.45; }
-    .cal-cell.today{ border-color: rgba(255,255,255,.28); }
-    .cal-top{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:6px;
-    }
-    .cal-day{
-      font-weight:900;
-      font-size:16px;
-      color:#fff;
-      line-height:1;
-    }
-    .cal-badge{
-      font-size:11px;
-      font-weight:900;
-      padding:2px 8px;
-      border-radius:999px;
-      border:1px solid var(--border);
-      color:rgba(255,255,255,.75);
-      white-space:nowrap;
-    }
-    .cal-badge.work{ border-color: rgba(34,197,94,.35); color: rgba(220,252,231,.95); }
-    .cal-badge.off{ border-color: rgba(255,255,255,.20); color: rgba(255,255,255,.75); }
-    .cal-badge.leave{ border-color: rgba(245,158,11,.35); color: rgba(255,237,213,.95); }
-
-    .cal-slot{
-      font-weight:800;
-      font-size:12px;
-      color:rgba(255,255,255,.90);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .cal-note{
-      font-size:11px;
-      color:rgba(255,255,255,.55);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-
-    .calendar-detail{
-      margin-top:10px;
-      border:1px solid var(--border);
-      border-radius:14px;
-      background:rgba(0,0,0,.22);
-      padding:12px;
-      color:rgba(255,255,255,.90);
-      display:none;
-    }
-    .detail-title{ font-weight:900; margin-bottom:8px; }
-    .detail-line{ color:rgba(255,255,255,.75); font-size:13px; line-height:1.5; }
-    .detail-chip{
-      display:inline-block;
-      margin-left:6px;
-      font-size:12px;
-      font-weight:900;
-      padding:3px 10px;
-      border-radius:999px;
-      border:1px solid var(--border);
-      color:rgba(255,255,255,.85);
-    }
+    .calendar-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:10px;color:rgba(255,255,255,.65);font-weight:800;font-size:12px;user-select:none;}
+    .calendar-weekdays div{text-align:center;padding:6px 0;}
+    .calendar-grid{margin-top:8px;display:grid;grid-template-columns:repeat(7,1fr);gap:8px;max-height:54vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+    .cal-cell{border:1px solid var(--border);border-radius:14px;background:rgba(0,0,0,.22);padding:10px 10px;min-height:74px;display:flex;flex-direction:column;gap:6px;}
+    .cal-cell.inactive{opacity:.45;}
+    .cal-cell.today{border-color:rgba(255,255,255,.28);}
+    .cal-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;}
+    .cal-day{font-weight:900;font-size:16px;color:#fff;line-height:1;}
+    .cal-badge{font-size:11px;font-weight:900;padding:2px 8px;border-radius:999px;border:1px solid var(--border);color:rgba(255,255,255,.75);white-space:nowrap;}
+    .cal-badge.work{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95);}
+    .cal-badge.off{border-color:rgba(255,255,255,.20);color:rgba(255,255,255,.75);}
+    .cal-badge.leave{border-color:rgba(245,158,11,.35);color:rgba(255,237,213,.95);}
+    .cal-slot{font-weight:800;font-size:12px;color:rgba(255,255,255,.90);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .cal-note{font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .calendar-detail{margin-top:10px;border:1px solid var(--border);border-radius:14px;background:rgba(0,0,0,.22);padding:12px;color:rgba(255,255,255,.90);display:none;}
+    .detail-title{font-weight:900;margin-bottom:8px;}
+    .detail-line{color:rgba(255,255,255,.75);font-size:13px;line-height:1.5;}
+    .detail-chip{display:inline-block;margin-left:6px;font-size:12px;font-weight:900;padding:3px 10px;border-radius:999px;border:1px solid var(--border);color:rgba(255,255,255,.85);}
 </style>
 </head>
 <body>
@@ -256,6 +183,7 @@
       <div class="calendar-weekdays" id="calWeekdays"></div>
       <div class="calendar-grid" id="calendarGrid"></div>
       <div class="calendar-detail" id="calendarDetail"></div>
+      <div class="list" id="scheduleList" style="display:none;"></div>
       <div class="mini">班表來源：shift_overrides ＞ shift_month（PT）＞ shift_templates（FT）。</div>
     </div>
   </div>
@@ -329,6 +257,21 @@
     scheduleStatus.className = 'status ' + (type || '');
     scheduleStatus.textContent = text;
   }
+
+  function debugLog_(msg){
+    try{
+      const el = document.getElementById('debugOverlay');
+      if(!el) return;
+      el.style.display = 'block';
+      el.textContent = (el.textContent ? (el.textContent + "\n\n") : "") + String(msg);
+    }catch(e){}
+  }
+  window.addEventListener('error', (e)=>{
+    debugLog_('JS Error: ' + (e.message || e.type) + (e.filename ? ('\n' + e.filename + ':' + e.lineno) : ''));
+  });
+  window.addEventListener('unhandledrejection', (e)=>{
+    debugLog_('Promise Rejection: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)));
+  });
   function showCloseBtn(){ btnClose.style.display = 'block'; }
   btnClose.addEventListener('click', ()=>{ try{ liff.closeWindow(); }catch(e){} });
 
@@ -798,39 +741,49 @@
   async function loadSchedule(month){
     try{
       setScheduleStatus('', '載入班表中…');
-
       const calGridEl = document.getElementById('calendarGrid');
       const calDetailEl = document.getElementById('calendarDetail');
+      const listEl = document.getElementById('scheduleList');
       if (calDetailEl) calDetailEl.style.display = 'none';
       if (calGridEl) calGridEl.innerHTML = '';
+
+      const payload = { userId: profile.userId, month };
+      debugLog_('loadSchedule payload: ' + JSON.stringify(payload));
 
       const resp = await fetch('/api/schedule', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ userId: profile.userId, month })
+        body: JSON.stringify(payload)
       });
 
-      const data = await resp.json();
+      const text = await resp.text();
+      let data = null;
+      try{ data = JSON.parse(text); }catch(_){}
+
+      if(!data){
+        setScheduleStatus('bad', '班表回應不是 JSON');
+        debugLog_('schedule raw response: ' + text.slice(0,800));
+        return;
+      }
       if(!data.ok){
         setScheduleStatus('bad', data.message || '班表讀取失敗');
+        debugLog_('schedule error json: ' + JSON.stringify(data));
         return;
       }
 
-      setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
-
       const items = data.items || [];
-      const map = {};
-      for(const it of items){
-        map[it.date] = it;
-      }
+      setScheduleStatus('ok', `✅ 已載入 ${month} 班表（${items.length}筆）`);
 
-      // Weekdays header (Mon-Sun)
+      // Render weekdays
       const weekdays = ['一','二','三','四','五','六','日'];
       const wdEl = document.getElementById('calWeekdays');
       if (wdEl && !wdEl.dataset.ready){
         wdEl.innerHTML = weekdays.map(w=>`<div>週${w}</div>`).join('');
         wdEl.dataset.ready = '1';
       }
+
+      const map = {};
+      for(const it of items){ map[it.date] = it; }
 
       const [y,m] = month.split('-').map(Number);
       const first = new Date(y, m-1, 1);
@@ -847,10 +800,6 @@
       }
       for(let day=1; day<=daysInMonth; day++){
         cells.push({ date: new Date(y, m-1, day), inMonth:true });
-      }
-      while(cells.length % 7 !== 0){
-        const nextDay = cells.length - (prevDays + daysInMonth) + 1;
-        cells.push({ date: new Date(y, m-1, daysInMonth + nextDay), inMonth:false });
       }
       while(cells.length < 42){
         const nextDay = cells.length - (prevDays + daysInMonth) + 1;
@@ -880,7 +829,6 @@
         const key = fmtKey(c.date);
         const it = map[key] || null;
         const badge = typeBadge(it);
-
         const isToday = (key === todayKey);
         const cls = ['cal-cell', c.inMonth ? '' : 'inactive', isToday ? 'today' : ''].filter(Boolean).join(' ');
 
@@ -898,9 +846,7 @@
           <div class="cal-slot">${slot || '&nbsp;'}</div>
           <div class="cal-note">${note || '&nbsp;'}</div>
         `;
-
         div.addEventListener('click', ()=>{
-          if(!calDetailEl) return;
           const badgeTxt = badge.text || '—';
           const segs = (it && it.segments && it.segments.length) ? it.segments.map(s=>`${s.start}-${s.end}`).join(' / ') : '—';
           const noteTxt = note || '—';
@@ -911,7 +857,6 @@
           `;
           calDetailEl.style.display = 'block';
         });
-
         calGridEl.appendChild(div);
       }
 
@@ -920,6 +865,7 @@
       }
     }catch(err){
       setScheduleStatus('bad', '班表載入失敗：' + (err && err.message ? err.message : err));
+      debugLog_('loadSchedule exception: ' + (err && err.stack ? err.stack : err));
     }
   });
       const data = await resp.json();
@@ -1032,5 +978,7 @@
     lastTouchEnd = now;
   }, { passive: false });
 </script>
+
+<div class="debug-overlay" id="debugOverlay"></div>
 </body>
 </html>
