@@ -63,7 +63,36 @@
     .badge.off{border-color:rgba(239,68,68,.35);color:rgba(254,226,226,.95)}
     .seg{color:#fff;font-weight:800}
     .note{color:rgba(255,255,255,.60);font-size:12px;margin-top:4px}
-  </style>
+  
+    /* ===== UX Fix: no page scrolling ===== */
+    html, body { height: 100%; overflow: hidden; }
+    .wrap { height: 100vh; overflow: hidden; }
+    /* prevent scroll bounce inside panels unless explicitly allowed */
+    #panelClock, #panelSchedule { overflow: hidden; }
+
+    /* ===== Schedule header sizing ===== */
+    .scheduleTop{ gap:8px; }
+    .monthBox{
+      padding:10px 12px;
+      border-radius:14px;
+      min-width: 0;
+    }
+    /* make prev/next buttons compact */
+    .monthBtn{
+      width: auto;
+      min-width: 74px;
+      padding:10px 12px;
+      border-radius:14px;
+      font-size:14px;
+      font-weight:900;
+    }
+    /* keep schedule list within card and scroll internally if too long */
+    #scheduleList{
+      max-height: 52vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+</style>
 </head>
 <body>
   <div class="wrap">
