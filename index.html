@@ -133,6 +133,43 @@
     .cal-detail-row:last-child{ border-bottom:none; }
     .cal-detail-k{ color:rgba(255,255,255,.55); }
     .cal-detail-v{ color:#fff; font-weight:800; text-align:right; white-space:pre-line; }
+
+    /* ===== Calendar popup sizing (smaller) ===== */
+    .cal-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:50;}
+    .cal-modal{position:fixed;left:12px;right:12px;bottom:12px;
+    border:1px solid var(--border);
+    border-radius:16px;
+    background:rgba(0,0,0,.85);
+    color:var(--text);
+    padding:12px;
+    box-shadow:0 16px 42px rgba(0,0,0,.55);
+    max-height:40vh; /* smaller */
+    overflow:hidden;
+    display:none;
+    z-index:51;}
+    .cal-modal-header{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+    .cal-modal-title{font-weight:900;font-size:14px;}
+    .cal-modal-close{border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text);border-radius:12px;padding:8px 10px;font-weight:900;}
+    .cal-modal-body{margin-top:10px;max-height:calc(40vh - 54px);overflow:auto;-webkit-overflow-scrolling:touch;}
+    .cal-kv{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:12px;background:rgba(0,0,0,.25);margin-bottom:8px;}
+    .cal-k{color:var(--muted);font-size:13px;}
+    .cal-v{color:var(--text);font-size:13px;font-weight:800;text-align:right;white-space:pre-line;}
+    /* calendar cells only show date */
+    .cal-cell-meta,.cal-cell-badge,.cal-cell-time{display:none !important;}
+
+    /* ===== Calendar detail card smaller ===== */
+    .cal-detail-card{
+      max-width: 520px;
+      width: calc(100% - 24px);
+      margin: 0 auto;
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .cal-detail-body{
+      max-height: 34vh;
+      overflow:auto;
+      -webkit-overflow-scrolling:touch;
+    }
 </style>
 </head>
 <body>
@@ -210,6 +247,28 @@
 <script>
   // ===== 基本設定 =====
   const LIFF_ID = "2008810311-jmqyUaTN";
+
+  // ===== Schedule cache (localStorage) =====
+  const SCHEDULE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+  function cacheKey_(userId, month){ return `hr_schedule_${userId}_${month}`; }
+
+  function loadScheduleCache_(userId, month){
+    try{
+      const raw = localStorage.getItem(cacheKey_(userId, month));
+      if(!raw) return null;
+      const obj = JSON.parse(raw);
+      if(!obj || !obj.ts || !obj.data) return null;
+      if(Date.now() - obj.ts > SCHEDULE_CACHE_TTL_MS) return null;
+      return obj.data;
+    }catch(e){ return null; }
+  }
+
+  function saveScheduleCache_(userId, month, data){
+    try{
+      localStorage.setItem(cacheKey_(userId, month), JSON.stringify({ts: Date.now(), data}));
+    }catch(e){}
+  }
 
   // 店家座標（前端計算距離用）
   const SHOP_LAT = 24.9714585;
@@ -729,11 +788,7 @@
 
       const cell = document.createElement('div');
       cell.className = 'cal-cell' + (isOut ? ' is-out' : '') + (isToday_(cellDate) ? ' today' : '');
-      cell.innerHTML = `
-        <div class="cal-day">${cellDate.getDate()}</div>
-        ${badgeTxt ? `<div class="cal-badge ${badgeCls}">${badgeTxt}</div>` : ``}
-        ${seg0 ? `<div class="cal-time">${seg0}</div>` : ``}
-      `;
+      cell.innerHTML = `<div class="cal-day">${cellDate.getDate()}</div>`;
       if(!isOut){
         cell.onclick = ()=> openDetail(key, it || {type:'OFF',segments:[],note:''});
       }
@@ -742,19 +797,61 @@
   }
 
 async function loadSchedule(month){
+    setScheduleStatus('', '載入班表中…');
+    // 先畫出月曆（只顯示日期）
+    renderCalendar_(month, []);
+
+    // 快取
+    const cached = loadScheduleCache_(profile.userId, month);
+    if(cached && cached.items){
+      window.__scheduleItems = cached.items;
+      setScheduleStatus('ok', `✅ 已載入 ${month} 班表（快取）`);
+      return;
+    }
+
+    // 背景抓
     try{
-      setScheduleStatus('', '載入班表中…');
-      scheduleList.innerHTML = '';
       const resp = await fetch('/api/schedule', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ userId: profile.userId, month })
       });
       const data = await resp.json();
-      if(!data.ok){
-        setScheduleStatus('bad', data.message || '班表讀取失敗');
+      if(!data || !data.ok){
+        setScheduleStatus('bad', (data && data.message) ? data.message : '班表讀取失敗');
+        window.__scheduleItems = [];
         return;
       }
+      saveScheduleCache_(profile.userId, month, data);
+      window.__scheduleItems = data.items || [];
+      setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
+    }catch(e){
+      setScheduleStatus('bad', '班表載入失敗');
+      window.__scheduleItems = [];
+    }
+  }
+
+    // 再背景抓新資料
+    try{
+      const resp = await fetch('/api/schedule', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ userId: profile.userId, month })
+      });
+      const data = await resp.json();
+      if(!data || !data.ok){
+        setScheduleStatus('bad', (data && data.message) ? data.message : '班表讀取失敗');
+        window.__scheduleItems = [];
+        return;
+      }
+      saveScheduleCache_(profile.userId, month, data);
+      window.__scheduleItems = data.items || [];
+      setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
+    }catch(err){
+      setScheduleStatus('bad', '班表載入失敗');
+      window.__scheduleItems = [];
+    }
+  }
       const items = data.items || [];
       setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
       renderCalendar_(month, items);
@@ -942,5 +1039,15 @@ async function loadSchedule(month){
     lastTouchEnd = now;
   }, { passive: false });
 </script>
+
+  <!-- ===== Calendar Detail Modal ===== -->
+  <div class="cal-modal-backdrop" id="calBackdrop"></div>
+  <div class="cal-modal" id="calModal">
+    <div class="cal-modal-header">
+      <div class="cal-modal-title" id="calModalTitle">班表</div>
+      <button type="button" class="cal-modal-close" id="calModalClose">關閉</button>
+    </div>
+    <div class="cal-modal-body" id="calModalBody"></div>
+  </div>
 </body>
 </html>
