@@ -107,6 +107,33 @@
       touch-action: auto;
     }
 
+    /* ===== Calendar ===== */
+    .calendar{ margin-top: 10px; border:1px solid var(--border); border-radius:14px; background:rgba(0,0,0,.18); overflow:hidden; }
+    .cal-weekdays{ display:grid; grid-template-columns:repeat(7,1fr); gap:0; border-bottom:1px solid var(--border); }
+    .cal-weekdays > div{ text-align:center; padding:8px 0; font-size:12px; color:rgba(255,255,255,.70); }
+    .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:0; }
+    .cal-cell{ border-right:1px solid var(--border); border-bottom:1px solid var(--border); min-height:62px; padding:8px; position:relative; }
+    .cal-cell:nth-child(7n){ border-right:none; }
+    .cal-cell.is-out{ opacity:.35; }
+    .cal-day{ font-size:13px; font-weight:900; color:rgba(255,255,255,.92); }
+    .cal-badge{ margin-top:6px; font-size:11px; padding:3px 8px; border-radius:999px; display:inline-block; border:1px solid var(--border); color:rgba(255,255,255,.85); background:rgba(255,255,255,.06); }
+    .cal-badge.work{ border-color:rgba(255,255,255,.22); }
+    .cal-badge.off{ opacity:.9; }
+    .cal-time{ margin-top:6px; font-size:11px; color:rgba(255,255,255,.70); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .cal-cell.today{ outline:2px solid rgba(255,255,255,.35); outline-offset:-2px; border-radius:8px; }
+
+    .cal-detail{ position:fixed; inset:0; display:flex; align-items:flex-end; justify-content:center; padding:12px; background:rgba(0,0,0,.55); z-index:999; }
+    .cal-detail.hidden{ display:none; }
+    .cal-detail-card{ width:min(640px, 100%); border-radius:18px; border:1px solid var(--border); background:rgba(15,18,24,.96); box-shadow:0 20px 60px rgba(0,0,0,.55); overflow:hidden; }
+    .cal-detail-head{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--border); }
+    .cal-detail-title{ font-weight:900; color:#fff; }
+    .cal-detail-close{ border:none; background:rgba(255,255,255,.10); color:#fff; width:36px; height:36px; border-radius:12px; font-weight:900; }
+    .cal-detail-body{ padding:12px 14px; color:rgba(255,255,255,.85); font-size:14px; line-height:1.5; }
+    .cal-detail-row{ display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.06); }
+    .cal-detail-row:last-child{ border-bottom:none; }
+    .cal-detail-k{ color:rgba(255,255,255,.55); }
+    .cal-detail-v{ color:#fff; font-weight:800; text-align:right; white-space:pre-line; }
+
     /* ===== Calendar (month view) ===== */
     .cal-week{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:10px; color:rgba(255,255,255,.55); font-size:12px; text-align:center; }
     .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-top:8px; }
@@ -222,19 +249,26 @@
       </div>
 
       <div class="status" id="scheduleStatus">尚未載入…</div>
-      <div class="cal-week">
-  <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
-</div>
-<div class="cal-grid" id="calendarGrid"></div>
-<div class="sheet hidden" id="daySheet">
-  <div class="sheet-card">
-    <div class="sheet-head">
-      <div class="sheet-title" id="dayTitle">—</div>
-      <button type="button" class="sheet-close" id="dayClose" aria-label="關閉">✕</button>
-    </div>
-    <div class="sheet-body" id="dayBody"></div>
-  </div>
-</div>
+
+      <!-- 月曆（週一為第一天） -->
+      <div class="calendar" id="calendarWrap">
+        <div class="cal-weekdays" id="calWeekdays">
+          <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
+        </div>
+        <div class="cal-grid" id="scheduleList"></div>
+      </div>
+
+      <!-- 點日期的明細卡 -->
+      <div class="cal-detail hidden" id="calDetail">
+        <div class="cal-detail-card">
+          <div class="cal-detail-head">
+            <div class="cal-detail-title" id="calDetailTitle">----</div>
+            <button class="cal-detail-close" id="calDetailClose" type="button">✕</button>
+          </div>
+          <div class="cal-detail-body" id="calDetailBody"></div>
+        </div>
+      </div>
+
       <div class="mini">班表來源：shift_overrides ＞ shift_month（PT）＞ shift_templates（FT）。</div>
     </div>
   </div>
@@ -672,77 +706,165 @@
 
       // 嘗試後端（0.7 秒）
       let serverData = null;
-      let serverFlex = null;
-      try{
-        const controller = new AbortController();
-        const timer = setTimeout(()=>controller.abort(), BACKEND_TIMEOUT_MS);
-        const resp = await fetch('/api/clock', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(payload),
-          signal: controller.signal
-        });
-        clearTimeout(timer);
-        serverData = await resp.json().catch(()=>null);
 
-        if(serverData && serverData.ok){
-          serverFlex = serverData.flex || null;
-          if(serverData.display_name){
-            const dn = String(serverData.display_name).trim();
-            if(dn){
-              window.__empDisplayName = dn;
-              setEmpNameCached_(dn);
-              empName = dn;
-            }
-          }
-        }else if(serverData && serverData.ok === false && serverData.message){
-          setStatus('bad', serverData.message);
-          await refreshState();
-          btnIn.disabled = false;
-          btnOut.disabled = false;
-          showCloseBtn();
-          return;
-        }
-      }catch(e){
-        // timeout → fallback
+  function pad2_(n){ return String(n).padStart(2,'0'); }
+  function ymToDate_(ym){ // 'YYYY-MM'
+    const [y,m] = ym.split('-').map(Number);
+    return new Date(y, m-1, 1);
+  }
+  function dateKey_(d){
+    return `${d.getFullYear()}-${pad2_(d.getMonth()+1)}-${pad2_(d.getDate())}`;
+  }
+  function isToday_(d){
+    const now = new Date();
+    return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth() && d.getDate()===now.getDate();
+  }
+  function firstDowMonday_(d){ // Monday=0..Sunday=6
+    const js = d.getDay(); // Sun=0..Sat=6
+    return (js + 6) % 7;
+  }
+  function renderCalendar_(month, items){
+    // month: YYYY-MM ; items unused for cell display (detail uses map)
+    const [yy, mm] = month.split('-').map(Number);
+    const first = new Date(yy, mm-1, 1);
+    const firstDow = (first.getDay() + 6) % 7; // Monday=0
+    const daysInMonth = new Date(yy, mm, 0).getDate();
+
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+    const grid = document.getElementById('calendarGrid');
+    if(!grid) return;
+    grid.innerHTML = '';
+
+    for(let i=0;i<42;i++){
+      const dayNum = i - firstDow + 1;
+      const inMonth = dayNum >= 1 && dayNum <= daysInMonth;
+      const dateKey = inMonth ? `${yy}-${String(mm).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}` : '';
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cal-cell' + (inMonth ? '' : ' cal-out') + (dateKey===todayKey ? ' cal-today' : '');
+      btn.disabled = !inMonth;
+      btn.innerHTML = `<div class="cal-day">${inMonth ? dayNum : ''}</div>`;
+
+      if(inMonth){
+        btn.addEventListener('click', ()=> openDayDetail_(dateKey));
+      }
+      grid.appendChild(btn);
+    }
+}
+
+    const first = ymToDate_(month);
+    const y = first.getFullYear();
+    const m = first.getMonth();
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+
+    // previous month info
+    const prevDays = new Date(y, m, 0).getDate();
+    const startOffset = firstDowMonday_(first); // 0..6
+    const totalCells = 42; // 6 weeks
+
+    grid.innerHTML = '';
+
+    function openDetail(dateKey, it){
+      detailTitle.textContent = dateKey;
+      const segs = (it && it.segments && it.segments.length)
+        ? it.segments.map(s=>`${s.start}-${s.end}`).join('\n')
+        : '—';
+      const type = it ? it.type : 'OFF';
+      const note = (it && it.note) ? it.note : '—';
+
+      detailBody.innerHTML = `
+        <div class="cal-detail-row"><div class="cal-detail-k">狀態</div><div class="cal-detail-v">${type}</div></div>
+        <div class="cal-detail-row"><div class="cal-detail-k">時段</div><div class="cal-detail-v">${segs}</div></div>
+        <div class="cal-detail-row"><div class="cal-detail-k">備註</div><div class="cal-detail-v">${note}</div></div>
+      `;
+      detail.classList.remove('hidden');
+    }
+
+    detailClose.onclick = ()=> detail.classList.add('hidden');
+    detail.onclick = (e)=>{ if(e.target===detail) detail.classList.add('hidden'); };
+
+    for(let i=0;i<totalCells;i++){
+      let cellDate;
+      let isOut=false;
+
+      if(i < startOffset){
+        const day = prevDays - (startOffset - 1 - i);
+        cellDate = new Date(y, m-1, day);
+        isOut = true;
+      }else if(i >= startOffset + daysInMonth){
+        const day = i - (startOffset + daysInMonth) + 1;
+        cellDate = new Date(y, m+1, day);
+        isOut = true;
+      }else{
+        const day = i - startOffset + 1;
+        cellDate = new Date(y, m, day);
       }
 
-      if(!serverFlex){
-        // 背景寫入，不等待
-        queueClockWrite_(payload);
-      }
+      const key = dateKey_(cellDate);
+      const it = map.get(key);
 
-      const toSend = serverFlex ? serverFlex : buildLocalFlex_(act, empName, hhmm, dateStr, timeStr, distM);
-      const msg = normalizeFlexMessage_(toSend);
+      const type = it ? it.type : (isOut ? '' : 'OFF');
+      const seg0 = (it && it.segments && it.segments.length) ? `${it.segments[0].start}-${it.segments[0].end}` : '';
+      const badgeTxt = (type==='WORK') ? '上班' : (type==='LEAVE' ? '請假' : (type==='OFF' ? '休' : ''));
+      const badgeCls = (type==='WORK') ? 'work' : (type==='LEAVE' ? 'off' : 'off');
 
-      try{
-        await liff.sendMessages([msg]);
-      }catch(e){
-        setStatus('warn', 'Flex 發送失敗：' + fmtErr_(e));
-        await refreshState();
-        btnIn.disabled = false;
-        btnOut.disabled = false;
-        showCloseBtn();
-        return;
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell' + (isOut ? ' is-out' : '') + (isToday_(cellDate) ? ' today' : '');
+      cell.innerHTML = `
+        <div class="cal-day">${cellDate.getDate()}</div>
+        ${badgeTxt ? `<div class="cal-badge ${badgeCls}">${badgeTxt}</div>` : ``}
+        ${seg0 ? `<div class="cal-time">${seg0}</div>` : ``}
+      `;
+      if(!isOut){
+        cell.onclick = ()=> openDetail(key, it || {type:'OFF',segments:[],note:''});
       }
-
-      try{
-        liff.closeWindow();
-        return;
-      }catch(e){
-        setStatus('ok', 'Flex 已送出 ✅（若未自動關閉，請按「關閉視窗」）');
-        await refreshState();
-        btnIn.disabled = false;
-        btnOut.disabled = false;
-        showCloseBtn();
-      }
-    }catch(err){
-      setStatus('bad', '送出失敗：' + (err && err.message ? err.message : err));
-      btnIn.disabled = false;
-      btnOut.disabled = false;
-      showCloseBtn();
+      grid.appendChild(cell);
     }
   }
+
+async function loadSchedule(month){
+  try{
+    setScheduleStatus('', '載入中…');
+
+    // 先用快取（秒開）
+    const cached = loadCachedSchedule_(month);
+    if(cached){
+      window.__scheduleMap = cached.map || {};
+      setScheduleStatus('ok', `✅ ${month} 班表`);
+      renderCalendar_(month, []);
+      return;
+    }
+
+    const resp = await fetch('/api/schedule', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ userId: profile.userId, month })
+    });
+
+    const data = await resp.json();
+    if(!data || !data.ok){
+      setScheduleStatus('bad', (data && data.message) ? data.message : '班表讀取失敗');
+      return;
+    }
+
+    const map = {};
+    const items = data.items || [];
+    for(const it of items){
+      if(it && it.date) map[it.date] = it;
+    }
+
+    window.__scheduleMap = map;
+    saveCachedSchedule_(month, { map });
+
+    setScheduleStatus('ok', `✅ ${month} 班表`);
+    renderCalendar_(month, items);
+  }catch(err){
+    setScheduleStatus('bad', '班表載入失敗');
+  }
+}
 
   btnIn.addEventListener('click', ()=>postClock('IN'));
   btnOut.addEventListener('click', ()=>postClock('OUT'));
@@ -760,7 +882,34 @@
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
   })();
 
-  function changeMonth(delta){
+  
+  // ===== Schedule cache (avoid long loading) =====
+  const SCHEDULE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+  function cacheKey_(month){ return `sched_${month}_${profile ? profile.userId : ''}`; }
+
+  function loadCachedSchedule_(month){
+    try{
+      const key = cacheKey_(month);
+      const raw = sessionStorage.getItem(key) || localStorage.getItem(key);
+      if(!raw) return null;
+      const obj = JSON.parse(raw);
+      if(!obj || !obj.ts || !obj.data) return null;
+      if(Date.now() - obj.ts > SCHEDULE_CACHE_TTL_MS) return null;
+      return obj.data;
+    }catch(e){ return null; }
+  }
+
+  function saveCachedSchedule_(month, data){
+    try{
+      const key = cacheKey_(month);
+      const obj = { ts: Date.now(), data };
+      const raw = JSON.stringify(obj);
+      sessionStorage.setItem(key, raw);
+      try{ localStorage.setItem(key, raw); }catch(_){}
+    }catch(e){}
+  }
+function changeMonth(delta){
     const [y,m] = currentMonth.split('-').map(Number);
     const d = new Date(y, m-1 + delta, 1);
     currentMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
@@ -774,133 +923,15 @@
     if(!segs || !segs.length) return '—';
     return segs.map(s=>`${s.start}-${s.end}`).join(' / ');
   }
-  
-  // ===== Schedule cache + calendar =====
-  const SCHEDULE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-  window.__scheduleMap = {};
-
-  function cacheKey_(month){
-    const uid = (profile && profile.userId) ? profile.userId : '';
-    return `sched_${month}_${uid}`;
-  }
-  function loadCachedSchedule_(month){
+  async function loadSchedule(month){
     try{
-      const raw = sessionStorage.getItem(cacheKey_(month)) || localStorage.getItem(cacheKey_(month));
-      if(!raw) return null;
-      const obj = JSON.parse(raw);
-      if(!obj || !obj.ts || !obj.map) return null;
-      if(Date.now() - obj.ts > SCHEDULE_CACHE_TTL_MS) return null;
-      return obj;
-    }catch(e){ return null; }
-  }
-  function saveCachedSchedule_(month, map){
-    try{
-      const obj = { ts: Date.now(), map };
-      const raw = JSON.stringify(obj);
-      sessionStorage.setItem(cacheKey_(month), raw);
-      try{ localStorage.setItem(cacheKey_(month), raw); }catch(_){}
-    }catch(e){}
-  }
-
-  function renderCalendarMonth_(month){
-    const grid = document.getElementById('calendarGrid');
-    if(!grid) return;
-
-    const [yy, mm] = month.split('-').map(Number);
-    const first = new Date(yy, mm-1, 1);
-    const firstDow = (first.getDay() + 6) % 7; // Monday=0
-    const daysInMonth = new Date(yy, mm, 0).getDate();
-
-    const today = new Date();
-    const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-
-    grid.innerHTML = '';
-    for(let i=0;i<42;i++){
-      const dayNum = i - firstDow + 1;
-      const inMonth = dayNum >= 1 && dayNum <= daysInMonth;
-      const dateKey = inMonth ? `${yy}-${String(mm).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}` : '';
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'cal-cell' + (inMonth ? '' : ' cal-out') + (dateKey===todayKey ? ' cal-today' : '');
-      btn.disabled = !inMonth;
-      btn.innerHTML = `<div class="cal-day">${inMonth ? dayNum : ''}</div>`;
-      if(inMonth){
-        btn.addEventListener('click', ()=> openDayDetail_(dateKey));
-      }
-      grid.appendChild(btn);
-    }
-  }
-
-  function openDayDetail_(dateKey){
-    const it = (window.__scheduleMap || {})[dateKey];
-    const title = document.getElementById('dayTitle');
-    const body = document.getElementById('dayBody');
-    const sheet = document.getElementById('daySheet');
-    if(!title || !body || !sheet) return;
-
-    title.textContent = dateKey;
-
-    if(!it){
-      body.textContent = '無班表資料';
-    }else{
-      const type = it.type || 'WORK';
-      const segs = (it.segments && it.segments.length) ? it.segments.map(s=>`${s.start}-${s.end}`).join(' / ') : '—';
-      const note = it.note ? `\n備註：${it.note}` : '';
-      const typeZh = (type==='WORK') ? '上班' : (type==='LEAVE' ? '請假' : '休');
-      body.textContent = `狀態：${typeZh}\n時段：${segs}${note}`;
-    }
-    sheet.classList.remove('hidden');
-  }
-  function closeDayDetail_(){
-    const sheet = document.getElementById('daySheet');
-    if(sheet) sheet.classList.add('hidden');
-  }
-  document.addEventListener('click', (e)=>{
-    const t = e.target;
-    if(!t) return;
-    if(t.id === 'dayClose') closeDayDetail_();
-    if(t.id === 'daySheet') closeDayDetail_();
-  });
-
-async function loadSchedule(month){
-    try{
-      setScheduleStatus('', '載入中…');
-
-      const cached = loadCachedSchedule_(month);
-      if(cached){
-        window.__scheduleMap = cached.map || {};
-        setScheduleStatus('ok', `✅ ${month} 班表`);
-        renderCalendarMonth_(month);
-        return;
-      }
-
+      setScheduleStatus('', '載入班表中…');
+      scheduleList.innerHTML = '';
       const resp = await fetch('/api/schedule', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ userId: profile.userId, month })
       });
-
-      const data = await resp.json();
-      if(!data.ok){
-        setScheduleStatus('bad', data.message || '班表讀取失敗');
-        return;
-      }
-
-      const map = {};
-      const items = data.items || [];
-      for(const it of items){
-        if(it && it.date) map[it.date] = it;
-      }
-      window.__scheduleMap = map;
-      saveCachedSchedule_(month, map);
-
-      setScheduleStatus('ok', `✅ ${month} 班表`);
-      renderCalendarMonth_(month);
-    }catch(err){
-      setScheduleStatus('bad', '班表載入失敗');
-    }
-  });
       const data = await resp.json();
       if(!data.ok){
         setScheduleStatus('bad', data.message || '班表讀取失敗');
@@ -931,7 +962,44 @@ async function loadSchedule(month){
   }
 
   // ===== init =====
-  async function init(){
+  
+  function openDayDetail_(dateKey){
+    const map = window.__scheduleMap || {};
+    const it = map[dateKey];
+
+    const title = document.getElementById('dayTitle');
+    const body = document.getElementById('dayBody');
+    const sheet = document.getElementById('daySheet');
+    if(!title || !body || !sheet) return;
+
+    title.textContent = dateKey;
+
+    if(!it){
+      body.textContent = '無班表資料';
+    }else{
+      const type = it.type || 'WORK';
+      const segs = (it.segments && it.segments.length) ? it.segments.map(s=>`${s.start}-${s.end}`).join(' / ') : '—';
+      const note = it.note ? `\n備註：${it.note}` : '';
+      const typeZh = (type==='WORK') ? '上班' : (type==='LEAVE' ? '請假' : '休');
+      body.textContent = `狀態：${typeZh}\n時段：${segs}${note}`;
+    }
+
+    sheet.classList.remove('hidden');
+  }
+
+  function closeDayDetail_(){
+    const sheet = document.getElementById('daySheet');
+    if(sheet) sheet.classList.add('hidden');
+  }
+
+  document.addEventListener('click', (e)=>{
+    const t = e.target;
+    if(!t) return;
+    if(t.id === 'dayClose') closeDayDetail_();
+    if(t.id === 'daySheet') closeDayDetail_();
+  });
+
+async function init(){
     try{
       await liff.init({ liffId: LIFF_ID });
 
