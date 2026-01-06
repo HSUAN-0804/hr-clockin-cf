@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="zh-Hant">
 <head>
@@ -234,26 +235,46 @@
     return `${d}m / ${FENCE_M}m（${inRange ? '範圍內' : '超出'}）`;
   }
 
-  function getGps(){
-    return new Promise((resolve)=>{
+  function getCurrentPositionP_(options){
+    return new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
-        pos=>{
-          lastPos = pos;
-          lastDistM = haversineMeters_(SHOP_LAT, SHOP_LNG, pos.coords.latitude, pos.coords.longitude);
-          pillGps.textContent='定位已取得';
-          distText.textContent = formatDistText_(lastDistM);
-          resolve(pos);
-        },
-        ()=>{
-          lastPos = null;
-          lastDistM = null;
-          pillGps.textContent='定位失敗';
-          distText.textContent = '未取得';
-          resolve(null);
-        },
-        { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
+        (pos) => resolve(pos),
+        () => resolve(null),
+        options
       );
     });
+  }
+
+  // ✅ 開頁用：快速定位（允許快取、低精度）
+  async function getGpsFast(){
+    const pos = await getCurrentPositionP_({
+      enableHighAccuracy: false,
+      timeout: 2500,
+      maximumAge: 60000
+    });
+    if(pos){
+      lastPos = pos;
+      lastDistM = haversineMeters_(SHOP_LAT, SHOP_LNG, pos.coords.latitude, pos.coords.longitude);
+      pillGps.textContent='定位已取得';
+      distText.textContent = formatDistText_(lastDistM);
+    }
+    return pos;
+  }
+
+  // ✅ 打卡用：精準定位（20~50m 建議用這個）
+  async function getGpsAccurate(){
+    const pos = await getCurrentPositionP_({
+      enableHighAccuracy: true,
+      timeout: 12000,
+      maximumAge: 0
+    });
+    if(pos){
+      lastPos = pos;
+      lastDistM = haversineMeters_(SHOP_LAT, SHOP_LNG, pos.coords.latitude, pos.coords.longitude);
+      pillGps.textContent='定位已取得';
+      distText.textContent = formatDistText_(lastDistM);
+    }
+    return pos;
   }
 
   // ===== 員工名稱（display_name） =====
@@ -479,7 +500,10 @@
       btnIn.disabled = true;
       btnOut.disabled = true;
 
-      if(!lastPos) await getGps();
+      // 按打卡時，強制用精準定位（避免 20~50m 誤差）
+      const posAcc = await getGpsAccurate();
+      if(posAcc) lastPos = posAcc;
+      
       if(!lastPos){
         setStatus('bad','定位未取得，請允許定位後再打卡。');
         btnIn.disabled = false;
@@ -714,8 +738,8 @@
       await refreshState();
       setStatus('ok', '狀態已更新，可以打卡。');
 
-      // 定位背景抓（不阻塞）
-      getGps();
+      // 定位背景抓（不阻塞）：先用快速定位
+      getGpsFast();
 
       // Copy button
       btnCopyId.style.display = (profile.userId ? 'block' : 'none');
