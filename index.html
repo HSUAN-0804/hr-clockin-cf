@@ -93,36 +93,46 @@
       -webkit-overflow-scrolling: touch;
     }
 
-    /* ===== Lock zoom (safe) ===== */
-    *{ -webkit-tap-highlight-color: transparent; }
-    /* keep text selectable in inputs */
-    input, textarea{ -webkit-user-select:text; user-select:text; }
-    /* prevent double-tap zoom on buttons only */
-    button, .tab, .cal-cell{ touch-action: manipulation; }
+    /* ===== Lock zoom / double-tap zoom ===== */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    input, textarea {
+      -webkit-user-select: text;
+      user-select: text;
+      touch-action: auto;
+    }
 
-    /* debug overlay */
-    .debug-overlay{position:fixed;left:10px;right:10px;bottom:10px;max-height:38vh;overflow:auto;background:rgba(0,0,0,.75);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:10px;font-size:12px;line-height:1.35;z-index:99999;display:none;white-space:pre-wrap;}
+    /* ===== Calendar ===== */
+    .calendar{ margin-top: 10px; border:1px solid var(--border); border-radius:14px; background:rgba(0,0,0,.18); overflow:hidden; }
+    .cal-weekdays{ display:grid; grid-template-columns:repeat(7,1fr); gap:0; border-bottom:1px solid var(--border); }
+    .cal-weekdays > div{ text-align:center; padding:8px 0; font-size:12px; color:rgba(255,255,255,.70); }
+    .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:0; }
+    .cal-cell{ border-right:1px solid var(--border); border-bottom:1px solid var(--border); min-height:62px; padding:8px; position:relative; }
+    .cal-cell:nth-child(7n){ border-right:none; }
+    .cal-cell.is-out{ opacity:.35; }
+    .cal-day{ font-size:13px; font-weight:900; color:rgba(255,255,255,.92); }
+    .cal-badge{ margin-top:6px; font-size:11px; padding:3px 8px; border-radius:999px; display:inline-block; border:1px solid var(--border); color:rgba(255,255,255,.85); background:rgba(255,255,255,.06); }
+    .cal-badge.work{ border-color:rgba(255,255,255,.22); }
+    .cal-badge.off{ opacity:.9; }
+    .cal-time{ margin-top:6px; font-size:11px; color:rgba(255,255,255,.70); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .cal-cell.today{ outline:2px solid rgba(255,255,255,.35); outline-offset:-2px; border-radius:8px; }
 
-
-    /* ===== Calendar (Mon-Sun) ===== */
-    .calendar-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:10px;color:rgba(255,255,255,.65);font-weight:800;font-size:12px;user-select:none;}
-    .calendar-weekdays div{text-align:center;padding:6px 0;}
-    .calendar-grid{margin-top:8px;display:grid;grid-template-columns:repeat(7,1fr);gap:8px;max-height:54vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
-    .cal-cell{border:1px solid var(--border);border-radius:14px;background:rgba(0,0,0,.22);padding:10px 10px;min-height:74px;display:flex;flex-direction:column;gap:6px;}
-    .cal-cell.inactive{opacity:.45;}
-    .cal-cell.today{border-color:rgba(255,255,255,.28);}
-    .cal-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;}
-    .cal-day{font-weight:900;font-size:16px;color:#fff;line-height:1;}
-    .cal-badge{font-size:11px;font-weight:900;padding:2px 8px;border-radius:999px;border:1px solid var(--border);color:rgba(255,255,255,.75);white-space:nowrap;}
-    .cal-badge.work{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95);}
-    .cal-badge.off{border-color:rgba(255,255,255,.20);color:rgba(255,255,255,.75);}
-    .cal-badge.leave{border-color:rgba(245,158,11,.35);color:rgba(255,237,213,.95);}
-    .cal-slot{font-weight:800;font-size:12px;color:rgba(255,255,255,.90);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .cal-note{font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .calendar-detail{margin-top:10px;border:1px solid var(--border);border-radius:14px;background:rgba(0,0,0,.22);padding:12px;color:rgba(255,255,255,.90);display:none;}
-    .detail-title{font-weight:900;margin-bottom:8px;}
-    .detail-line{color:rgba(255,255,255,.75);font-size:13px;line-height:1.5;}
-    .detail-chip{display:inline-block;margin-left:6px;font-size:12px;font-weight:900;padding:3px 10px;border-radius:999px;border:1px solid var(--border);color:rgba(255,255,255,.85);}
+    .cal-detail{ position:fixed; inset:0; display:flex; align-items:flex-end; justify-content:center; padding:12px; background:rgba(0,0,0,.55); z-index:999; }
+    .cal-detail.hidden{ display:none; }
+    .cal-detail-card{ width:min(640px, 100%); border-radius:18px; border:1px solid var(--border); background:rgba(15,18,24,.96); box-shadow:0 20px 60px rgba(0,0,0,.55); overflow:hidden; }
+    .cal-detail-head{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--border); }
+    .cal-detail-title{ font-weight:900; color:#fff; }
+    .cal-detail-close{ border:none; background:rgba(255,255,255,.10); color:#fff; width:36px; height:36px; border-radius:12px; font-weight:900; }
+    .cal-detail-body{ padding:12px 14px; color:rgba(255,255,255,.85); font-size:14px; line-height:1.5; }
+    .cal-detail-row{ display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.06); }
+    .cal-detail-row:last-child{ border-bottom:none; }
+    .cal-detail-k{ color:rgba(255,255,255,.55); }
+    .cal-detail-v{ color:#fff; font-weight:800; text-align:right; white-space:pre-line; }
 </style>
 </head>
 <body>
@@ -173,10 +183,26 @@
       </div>
 
       <div class="status" id="scheduleStatus">尚未載入…</div>
-      <div class="calendar-weekdays" id="calWeekdays"></div>
-      <div class="calendar-grid" id="calendarGrid"></div>
-      <div class="calendar-detail" id="calendarDetail"></div>
-      <div class="list" id="scheduleList" style="display:none;"></div>
+
+      <!-- 月曆（週一為第一天） -->
+      <div class="calendar" id="calendarWrap">
+        <div class="cal-weekdays" id="calWeekdays">
+          <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
+        </div>
+        <div class="cal-grid" id="scheduleList"></div>
+      </div>
+
+      <!-- 點日期的明細卡 -->
+      <div class="cal-detail hidden" id="calDetail">
+        <div class="cal-detail-card">
+          <div class="cal-detail-head">
+            <div class="cal-detail-title" id="calDetailTitle">----</div>
+            <button class="cal-detail-close" id="calDetailClose" type="button">✕</button>
+          </div>
+          <div class="cal-detail-body" id="calDetailBody"></div>
+        </div>
+      </div>
+
       <div class="mini">班表來源：shift_overrides ＞ shift_month（PT）＞ shift_templates（FT）。</div>
     </div>
   </div>
@@ -250,21 +276,6 @@
     scheduleStatus.className = 'status ' + (type || '');
     scheduleStatus.textContent = text;
   }
-
-  function debugLog_(msg){
-    try{
-      const el = document.getElementById('debugOverlay');
-      if(!el) return;
-      el.style.display = 'block';
-      el.textContent = (el.textContent ? (el.textContent + "\n\n") : "") + String(msg);
-    }catch(e){}
-  }
-  window.addEventListener('error', (e)=>{
-    debugLog_('JS Error: ' + (e.message || e.type) + (e.filename ? ('\n' + e.filename + ':' + e.lineno) : ''));
-  });
-  window.addEventListener('unhandledrejection', (e)=>{
-    debugLog_('Promise Rejection: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)));
-  });
   function showCloseBtn(){ btnClose.style.display = 'block'; }
   btnClose.addEventListener('click', ()=>{ try{ liff.closeWindow(); }catch(e){} });
 
@@ -629,48 +640,129 @@
 
       // 嘗試後端（0.7 秒）
       let serverData = null;
-      let serverFlex = null;
-      try{
-        const controller = new AbortController();
-        const timer = setTimeout(()=>controller.abort(), BACKEND_TIMEOUT_MS);
-        const resp = await fetch('/api/clock', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(payload),
-          signal: controller.signal
-        });
-        clearTimeout(timer);
-        serverData = await resp.json().catch(()=>null);
 
-        if(serverData && serverData.ok){
-          serverFlex = serverData.flex || null;
-          if(serverData.display_name){
-            const dn = String(serverData.display_name).trim();
-            if(dn){
-              window.__empDisplayName = dn;
-              setEmpNameCached_(dn);
-              empName = dn;
-            }
-          }
-        }else if(serverData && serverData.ok === false && serverData.message){
-          setStatus('bad', serverData.message);
-          await refreshState();
-          btnIn.disabled = false;
-          btnOut.disabled = false;
-          showCloseBtn();
-          return;
-        }
-      }catch(e){
-        // timeout → fallback
+  function pad2_(n){ return String(n).padStart(2,'0'); }
+  function ymToDate_(ym){ // 'YYYY-MM'
+    const [y,m] = ym.split('-').map(Number);
+    return new Date(y, m-1, 1);
+  }
+  function dateKey_(d){
+    return `${d.getFullYear()}-${pad2_(d.getMonth()+1)}-${pad2_(d.getDate())}`;
+  }
+  function isToday_(d){
+    const now = new Date();
+    return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth() && d.getDate()===now.getDate();
+  }
+  function firstDowMonday_(d){ // Monday=0..Sunday=6
+    const js = d.getDay(); // Sun=0..Sat=6
+    return (js + 6) % 7;
+  }
+  function renderCalendar_(month, items){
+    const wrap = document.getElementById('calendarWrap');
+    const grid = document.getElementById('scheduleList');
+    const detail = document.getElementById('calDetail');
+    const detailTitle = document.getElementById('calDetailTitle');
+    const detailBody = document.getElementById('calDetailBody');
+    const detailClose = document.getElementById('calDetailClose');
+
+    // map by date
+    const map = new Map();
+    for(const it of items){
+      if(it && it.date) map.set(it.date, it);
+    }
+
+    const first = ymToDate_(month);
+    const y = first.getFullYear();
+    const m = first.getMonth();
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+
+    // previous month info
+    const prevDays = new Date(y, m, 0).getDate();
+    const startOffset = firstDowMonday_(first); // 0..6
+    const totalCells = 42; // 6 weeks
+
+    grid.innerHTML = '';
+
+    function openDetail(dateKey, it){
+      detailTitle.textContent = dateKey;
+      const segs = (it && it.segments && it.segments.length)
+        ? it.segments.map(s=>`${s.start}-${s.end}`).join('\n')
+        : '—';
+      const type = it ? it.type : 'OFF';
+      const note = (it && it.note) ? it.note : '—';
+
+      detailBody.innerHTML = `
+        <div class="cal-detail-row"><div class="cal-detail-k">狀態</div><div class="cal-detail-v">${type}</div></div>
+        <div class="cal-detail-row"><div class="cal-detail-k">時段</div><div class="cal-detail-v">${segs}</div></div>
+        <div class="cal-detail-row"><div class="cal-detail-k">備註</div><div class="cal-detail-v">${note}</div></div>
+      `;
+      detail.classList.remove('hidden');
+    }
+
+    detailClose.onclick = ()=> detail.classList.add('hidden');
+    detail.onclick = (e)=>{ if(e.target===detail) detail.classList.add('hidden'); };
+
+    for(let i=0;i<totalCells;i++){
+      let cellDate;
+      let isOut=false;
+
+      if(i < startOffset){
+        const day = prevDays - (startOffset - 1 - i);
+        cellDate = new Date(y, m-1, day);
+        isOut = true;
+      }else if(i >= startOffset + daysInMonth){
+        const day = i - (startOffset + daysInMonth) + 1;
+        cellDate = new Date(y, m+1, day);
+        isOut = true;
+      }else{
+        const day = i - startOffset + 1;
+        cellDate = new Date(y, m, day);
       }
 
-      if(!serverFlex){
-        // 背景寫入，不等待
-        queueClockWrite_(payload);
-      }
+      const key = dateKey_(cellDate);
+      const it = map.get(key);
 
-      const toSend = serverFlex ? serverFlex : buildLocalFlex_(act, empName, hhmm, dateStr, timeStr, distM);
-      const msg = normalizeFlexMessage_(toSend);
+      const type = it ? it.type : (isOut ? '' : 'OFF');
+      const seg0 = (it && it.segments && it.segments.length) ? `${it.segments[0].start}-${it.segments[0].end}` : '';
+      const badgeTxt = (type==='WORK') ? '上班' : (type==='LEAVE' ? '請假' : (type==='OFF' ? '休' : ''));
+      const badgeCls = (type==='WORK') ? 'work' : (type==='LEAVE' ? 'off' : 'off');
+
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell' + (isOut ? ' is-out' : '') + (isToday_(cellDate) ? ' today' : '');
+      cell.innerHTML = `
+        <div class="cal-day">${cellDate.getDate()}</div>
+        ${badgeTxt ? `<div class="cal-badge ${badgeCls}">${badgeTxt}</div>` : ``}
+        ${seg0 ? `<div class="cal-time">${seg0}</div>` : ``}
+      `;
+      if(!isOut){
+        cell.onclick = ()=> openDetail(key, it || {type:'OFF',segments:[],note:''});
+      }
+      grid.appendChild(cell);
+    }
+  }
+
+async function loadSchedule(month){
+    try{
+      setScheduleStatus('', '載入班表中…');
+      scheduleList.innerHTML = '';
+      const resp = await fetch('/api/schedule', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ userId: profile.userId, month })
+      });
+      const data = await resp.json();
+      if(!data.ok){
+        setScheduleStatus('bad', data.message || '班表讀取失敗');
+        return;
+      }
+      const items = data.items || [];
+      setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
+      renderCalendar_(month, items);
+      if(items.length===0) setScheduleStatus('warn', '這個月沒有班表資料（或你尚未同步排班）');
+    }catch(err){
+      setScheduleStatus('bad', '班表載入失敗：' + (err && err.message ? err.message : err));
+    }
+  }e_(toSend);
 
       try{
         await liff.sendMessages([msg]);
@@ -734,133 +826,12 @@
   async function loadSchedule(month){
     try{
       setScheduleStatus('', '載入班表中…');
-      const calGridEl = document.getElementById('calendarGrid');
-      const calDetailEl = document.getElementById('calendarDetail');
-      const listEl = document.getElementById('scheduleList');
-      if (calDetailEl) calDetailEl.style.display = 'none';
-      if (calGridEl) calGridEl.innerHTML = '';
-
-      const payload = { userId: profile.userId, month };
-      debugLog_('loadSchedule payload: ' + JSON.stringify(payload));
-
+      scheduleList.innerHTML = '';
       const resp = await fetch('/api/schedule', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ userId: profile.userId, month })
       });
-
-      const text = await resp.text();
-      let data = null;
-      try{ data = JSON.parse(text); }catch(_){}
-
-      if(!data){
-        setScheduleStatus('bad', '班表回應不是 JSON');
-        debugLog_('schedule raw response: ' + text.slice(0,800));
-        return;
-      }
-      if(!data.ok){
-        setScheduleStatus('bad', data.message || '班表讀取失敗');
-        debugLog_('schedule error json: ' + JSON.stringify(data));
-        return;
-      }
-
-      const items = data.items || [];
-      setScheduleStatus('ok', `✅ 已載入 ${month} 班表（${items.length}筆）`);
-
-      // Render weekdays
-      const weekdays = ['一','二','三','四','五','六','日'];
-      const wdEl = document.getElementById('calWeekdays');
-      if (wdEl && !wdEl.dataset.ready){
-        wdEl.innerHTML = weekdays.map(w=>`<div>週${w}</div>`).join('');
-        wdEl.dataset.ready = '1';
-      }
-
-      const map = {};
-      for(const it of items){ map[it.date] = it; }
-
-      const [y,m] = month.split('-').map(Number);
-      const first = new Date(y, m-1, 1);
-      const dowMon = (first.getDay() + 6) % 7; // Mon=0
-      const daysInMonth = new Date(y, m, 0).getDate();
-
-      const prevDays = dowMon;
-      const prevLast = new Date(y, m-1, 0).getDate();
-
-      const cells = [];
-      for(let i=prevDays; i>0; i--){
-        const day = prevLast - i + 1;
-        cells.push({ date: new Date(y, m-2, day), inMonth:false });
-      }
-      for(let day=1; day<=daysInMonth; day++){
-        cells.push({ date: new Date(y, m-1, day), inMonth:true });
-      }
-      while(cells.length < 42){
-        const nextDay = cells.length - (prevDays + daysInMonth) + 1;
-        cells.push({ date: new Date(y, m-1, daysInMonth + nextDay), inMonth:false });
-      }
-
-      const today = new Date();
-      const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-      const fmtKey = (d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-
-      const segText = (segs)=>{
-        if(!segs || !segs.length) return '';
-        const s0 = segs[0];
-        return `${s0.start}-${s0.end}`;
-      };
-
-      const typeBadge = (it)=>{
-        const t = it && it.type ? String(it.type) : '';
-        if(t === 'WORK') return {cls:'work', text:'上班'};
-        if(t === 'LEAVE') return {cls:'leave', text:'請假'};
-        if(t === 'OFF') return {cls:'off', text:'休'};
-        return {cls:'off', text:''};
-      };
-
-      calGridEl.innerHTML = '';
-      for(const c of cells){
-        const key = fmtKey(c.date);
-        const it = map[key] || null;
-        const badge = typeBadge(it);
-        const isToday = (key === todayKey);
-        const cls = ['cal-cell', c.inMonth ? '' : 'inactive', isToday ? 'today' : ''].filter(Boolean).join(' ');
-
-        const dayNum = c.date.getDate();
-        const slot = it && it.type === 'WORK' ? segText(it.segments) : '';
-        const note = it && it.note ? it.note : '';
-
-        const div = document.createElement('div');
-        div.className = cls;
-        div.innerHTML = `
-          <div class="cal-top">
-            <div class="cal-day">${dayNum}</div>
-            ${badge.text ? `<div class="cal-badge ${badge.cls}">${badge.text}</div>` : `<div class="cal-badge off" style="opacity:0">.</div>`}
-          </div>
-          <div class="cal-slot">${slot || '&nbsp;'}</div>
-          <div class="cal-note">${note || '&nbsp;'}</div>
-        `;
-        div.addEventListener('click', ()=>{
-          const badgeTxt = badge.text || '—';
-          const segs = (it && it.segments && it.segments.length) ? it.segments.map(s=>`${s.start}-${s.end}`).join(' / ') : '—';
-          const noteTxt = note || '—';
-          calDetailEl.innerHTML = `
-            <div class="detail-title">${key}<span class="detail-chip">${badgeTxt}</span></div>
-            <div class="detail-line">時段：${segs}</div>
-            <div class="detail-line">備註：${noteTxt}</div>
-          `;
-          calDetailEl.style.display = 'block';
-        });
-        calGridEl.appendChild(div);
-      }
-
-      if(items.length===0){
-        setScheduleStatus('warn', '這個月沒有班表資料（或你尚未同步排班）');
-      }
-    }catch(err){
-      setScheduleStatus('bad', '班表載入失敗：' + (err && err.message ? err.message : err));
-      debugLog_('loadSchedule exception: ' + (err && err.stack ? err.stack : err));
-    }
-  });
       const data = await resp.json();
       if(!data.ok){
         setScheduleStatus('bad', data.message || '班表讀取失敗');
@@ -960,8 +931,16 @@
   document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
   document.addEventListener('gesturechange', function (e) { e.preventDefault(); }, { passive: false });
   document.addEventListener('gestureend', function (e) { e.preventDefault(); }, { passive: false });
-</script>
 
-<div class="debug-overlay" id="debugOverlay"></div>
+  // prevent double-tap to zoom (best-effort)
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', function (e) {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+      e.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, { passive: false });
+</script>
 </body>
 </html>
