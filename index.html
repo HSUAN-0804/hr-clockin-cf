@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"/>
   <title>H.R燈藝｜員工打卡</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
@@ -91,6 +91,20 @@
       max-height: 52vh;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
+    }
+
+    /* ===== Lock zoom / double-tap zoom ===== */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    input, textarea {
+      -webkit-user-select: text;
+      user-select: text;
+      touch-action: auto;
     }
 </style>
 </head>
@@ -783,6 +797,23 @@
   }
 
   init();
+</script>
+
+<script>
+  // iOS Safari: prevent pinch zoom / gesture zoom
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+  document.addEventListener('gesturechange', function (e) { e.preventDefault(); }, { passive: false });
+  document.addEventListener('gestureend', function (e) { e.preventDefault(); }, { passive: false });
+
+  // prevent double-tap to zoom (best-effort)
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', function (e) {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+      e.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, { passive: false });
 </script>
 </body>
 </html>
