@@ -134,13 +134,13 @@
     .cal-detail-k{ color:rgba(255,255,255,.55); }
     .cal-detail-v{ color:#fff; font-weight:800; text-align:right; white-space:pre-line; }
 
-    /* ===== Calendar: date-only view (hide tags/time) ===== */
-    .cal-badge, .cal-time{ display:none !important; }
+    /* ===== Calendar minimal overrides (CSS only, keep JS untouched) ===== */
+    /* Show date only: hide any extra labels/time inside cells */
+    .cal-badge, .cal-time, .cal-sub, .cal-meta { display:none !important; }
     .cal-cell{ display:flex; align-items:center; justify-content:center; }
     .cal-day{ font-weight:900; font-size:16px; }
-    .cal-cell.is-out .cal-day{ opacity:.35; }
 
-    /* ===== Detail popup: smaller ===== */
+    /* Detail popup smaller */
     .cal-detail-card{ width:min(420px, 100%); max-height:55vh; }
     .cal-detail-body{ max-height:45vh; overflow:auto; -webkit-overflow-scrolling:touch; }
 </style>
@@ -218,8 +218,6 @@
   </div>
 
 <script>
-  // noop helper to avoid ReferenceError if leftover calls exist
-  function e_(){/*noop*/}
   // ===== 基本設定 =====
   const LIFF_ID = "2008810311-jmqyUaTN";
 
@@ -757,41 +755,25 @@ async function loadSchedule(month){
     try{
       setScheduleStatus('', '載入班表中…');
       scheduleList.innerHTML = '';
-
-      // ✅ 快取：同一月份先用 sessionStorage 秒顯示，再背景更新
-      const cacheKey = `sched_${profile.userId}_${month}`;
-      const cached = sessionStorage.getItem(cacheKey);
-      if(cached){
-        try{
-          const obj = JSON.parse(cached);
-          if(obj && Array.isArray(obj.items)){
-            renderCalendar_(month, obj.items);
-            setScheduleStatus('ok', `✅ 已載入 ${month} 班表（快取）`);
-          }
-        }catch(_){}
-      }
-      const controller = new AbortController();
-      const timer = setTimeout(()=>controller.abort(), 3500);
       const resp = await fetch('/api/schedule', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ userId: profile.userId, month }),
-        signal: controller.signal
+        body: JSON.stringify({ userId: profile.userId, month })
       });
-      clearTimeout(timer);
       const data = await resp.json();
       if(!data.ok){
         setScheduleStatus('bad', data.message || '班表讀取失敗');
         return;
       }
       const items = data.items || [];
-      try{ sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), items })); }catch(_){ }
       setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
       renderCalendar_(month, items);
       if(items.length===0) setScheduleStatus('warn', '這個月沒有班表資料（或你尚未同步排班）');
     }catch(err){
       setScheduleStatus('bad', '班表載入失敗：' + (err && err.message ? err.message : err));
     }
+  }e_(toSend);
+
       try{
         await liff.sendMessages([msg]);
       }catch(e){
@@ -855,15 +837,11 @@ async function loadSchedule(month){
     try{
       setScheduleStatus('', '載入班表中…');
       scheduleList.innerHTML = '';
-      const controller = new AbortController();
-      const timer = setTimeout(()=>controller.abort(), 3500);
       const resp = await fetch('/api/schedule', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ userId: profile.userId, month }),
-        signal: controller.signal
+        body: JSON.stringify({ userId: profile.userId, month })
       });
-      clearTimeout(timer);
       const data = await resp.json();
       if(!data.ok){
         setScheduleStatus('bad', data.message || '班表讀取失敗');
