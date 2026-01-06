@@ -218,6 +218,8 @@
   </div>
 
 <script>
+  // noop helper to avoid ReferenceError if leftover calls exist
+  function e_(){/*noop*/}
   // ===== 基本設定 =====
   const LIFF_ID = "2008810311-jmqyUaTN";
 
@@ -790,8 +792,6 @@ async function loadSchedule(month){
     }catch(err){
       setScheduleStatus('bad', '班表載入失敗：' + (err && err.message ? err.message : err));
     }
-  }e_(toSend);
-
       try{
         await liff.sendMessages([msg]);
       }catch(e){
