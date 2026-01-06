@@ -798,10 +798,11 @@
   async function loadSchedule(month){
     try{
       setScheduleStatus('', '載入班表中…');
-      const calGrid = document.getElementById('calendarGrid');
-      const calDetail = document.getElementById('calendarDetail');
-      if (calDetail) calDetail.style.display = 'none';
-      if (calGrid) calGrid.innerHTML = '';
+
+      const calGridEl = document.getElementById('calendarGrid');
+      const calDetailEl = document.getElementById('calendarDetail');
+      if (calDetailEl) calDetailEl.style.display = 'none';
+      if (calGridEl) calGridEl.innerHTML = '';
 
       const resp = await fetch('/api/schedule', {
         method:'POST',
@@ -818,13 +819,12 @@
       setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
 
       const items = data.items || [];
-      // map date -> item
       const map = {};
       for(const it of items){
         map[it.date] = it;
       }
 
-      // render weekdays (Mon-Sun)
+      // Weekdays header (Mon-Sun)
       const weekdays = ['一','二','三','四','五','六','日'];
       const wdEl = document.getElementById('calWeekdays');
       if (wdEl && !wdEl.dataset.ready){
@@ -832,50 +832,50 @@
         wdEl.dataset.ready = '1';
       }
 
-      // month calendar days
       const [y,m] = month.split('-').map(Number);
       const first = new Date(y, m-1, 1);
-      // JS getDay(): Sun=0..Sat=6 ; we want Mon=0..Sun=6
-      const dowMon = (first.getDay() + 6) % 7;
+      const dowMon = (first.getDay() + 6) % 7; // Mon=0
       const daysInMonth = new Date(y, m, 0).getDate();
 
-      // Include leading days from previous month to fill first week
       const prevDays = dowMon;
       const prevLast = new Date(y, m-1, 0).getDate();
 
       const cells = [];
       for(let i=prevDays; i>0; i--){
         const day = prevLast - i + 1;
-        const date = new Date(y, m-2, day);
-        cells.push({ date, inMonth:false });
+        cells.push({ date: new Date(y, m-2, day), inMonth:false });
       }
       for(let day=1; day<=daysInMonth; day++){
         cells.push({ date: new Date(y, m-1, day), inMonth:true });
       }
-      // trailing to complete 6 weeks grid (42 cells)
-      while(cells.length % 7 !== 0) cells.push({ date: new Date(y, m-1, daysInMonth + (cells.length - (prevDays+daysInMonth) + 1)), inMonth:false });
-      while(cells.length < 42) cells.push({ date: new Date(y, m-1, daysInMonth + (cells.length - (prevDays+daysInMonth) + 1)), inMonth:false });
+      while(cells.length % 7 !== 0){
+        const nextDay = cells.length - (prevDays + daysInMonth) + 1;
+        cells.push({ date: new Date(y, m-1, daysInMonth + nextDay), inMonth:false });
+      }
+      while(cells.length < 42){
+        const nextDay = cells.length - (prevDays + daysInMonth) + 1;
+        cells.push({ date: new Date(y, m-1, daysInMonth + nextDay), inMonth:false });
+      }
 
       const today = new Date();
       const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-
       const fmtKey = (d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
-      function segText(segs){
+      const segText = (segs)=>{
         if(!segs || !segs.length) return '';
-        // show first segment
-        const s = segs[0];
-        return `${s.start}-${s.end}`;
-      }
+        const s0 = segs[0];
+        return `${s0.start}-${s0.end}`;
+      };
 
-      function typeBadge(it){
-        const t = (it && it.type) ? String(it.type) : '';
-        if (t === 'WORK') return {cls:'work', text:'上班'};
-        if (t === 'LEAVE') return {cls:'leave', text:'請假'};
-        if (t === 'OFF') return {cls:'off', text:'休' };
+      const typeBadge = (it)=>{
+        const t = it && it.type ? String(it.type) : '';
+        if(t === 'WORK') return {cls:'work', text:'上班'};
+        if(t === 'LEAVE') return {cls:'leave', text:'請假'};
+        if(t === 'OFF') return {cls:'off', text:'休'};
         return {cls:'off', text:''};
-      }
+      };
 
+      calGridEl.innerHTML = '';
       for(const c of cells){
         const key = fmtKey(c.date);
         const it = map[key] || null;
@@ -893,29 +893,26 @@
         div.innerHTML = `
           <div class="cal-top">
             <div class="cal-day">${dayNum}</div>
-            ${badge.text ? `<div class="cal-badge ${badge.cls}">${badge.text}</div>` : `<div class="cal-badge off" style="opacity:.0">.</div>`}
+            ${badge.text ? `<div class="cal-badge ${badge.cls}">${badge.text}</div>` : `<div class="cal-badge off" style="opacity:0">.</div>`}
           </div>
           <div class="cal-slot">${slot || '&nbsp;'}</div>
-          <div class="cal-note">${note ? note : '&nbsp;'}</div>
+          <div class="cal-note">${note || '&nbsp;'}</div>
         `;
-        div.addEventListener('click', ()=>{
-          const detail = document.getElementById('calendarDetail');
-          if(!detail) return;
 
-          const title = `${key}`;
-          let badgeTxt = badge.text || '—';
+        div.addEventListener('click', ()=>{
+          if(!calDetailEl) return;
+          const badgeTxt = badge.text || '—';
           const segs = (it && it.segments && it.segments.length) ? it.segments.map(s=>`${s.start}-${s.end}`).join(' / ') : '—';
           const noteTxt = note || '—';
-
-          detail.innerHTML = `
-            <div class="detail-title">${title}<span class="detail-chip">${badgeTxt}</span></div>
+          calDetailEl.innerHTML = `
+            <div class="detail-title">${key}<span class="detail-chip">${badgeTxt}</span></div>
             <div class="detail-line">時段：${segs}</div>
             <div class="detail-line">備註：${noteTxt}</div>
           `;
-          detail.style.display = 'block';
+          calDetailEl.style.display = 'block';
         });
 
-        calGrid.appendChild(div);
+        calGridEl.appendChild(div);
       }
 
       if(items.length===0){
