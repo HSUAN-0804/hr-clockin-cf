@@ -134,70 +134,20 @@
     .cal-detail-k{ color:rgba(255,255,255,.55); }
     .cal-detail-v{ color:#fff; font-weight:800; text-align:right; white-space:pre-line; }
 
-    /* ===== Calendar (month view) ===== */
-    .cal-week{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:10px; color:rgba(255,255,255,.55); font-size:12px; text-align:center; }
-    .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-top:8px; }
-    .cal-cell{
-      border:1px solid var(--border);
-      background:rgba(255,255,255,.03);
-      border-radius:14px;
-      padding:10px 6px;
-      color:rgba(255,255,255,.92);
-      text-align:center;
-      cursor:pointer;
-    }
-    .cal-cell:active{ transform:scale(.99); }
-    .cal-cell[disabled]{ opacity:.25; cursor:default; }
-    .cal-out{ background:transparent; border-color:transparent; }
-    .cal-day{ font-weight:900; font-size:16px; line-height:1; }
-    .cal-today{ border-color:rgba(255,255,255,.35); background:rgba(255,255,255,.06); }
+    /* Calendar cells: show only date */
+    .cal-badge, .cal-time { display:none !important; }
 
-    /* ===== Day detail sheet (smaller) ===== */
-    .sheet.hidden{ display:none; }
-    .sheet{
-      position:fixed;
-      left:0; right:0; bottom:0; top:0;
-      background:rgba(0,0,0,.35);
-      display:flex;
-      align-items:flex-end;
-      justify-content:center;
-      padding:12px;
-      z-index:9999;
-    }
-    .sheet-card{
-      width:min(520px, 92vw);
-      max-height:45vh;
-      background:rgba(20,22,28,.95);
-      border:1px solid rgba(255,255,255,.10);
-      border-radius:18px;
-      box-shadow:0 18px 50px rgba(0,0,0,.45);
+    /* Detail popup smaller */
+    .cal-detail-card{
+      width:min(520px, 92vw) !important;
+      max-height:45vh !important;
       overflow:hidden;
     }
-    .sheet-head{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:10px 12px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-    }
-    .sheet-title{ font-weight:900; font-size:14px; color:rgba(255,255,255,.92); }
-    .sheet-close{
-      border:none;
-      background:rgba(255,255,255,.10);
-      color:rgba(255,255,255,.92);
-      width:32px; height:32px;
-      border-radius:10px;
-      cursor:pointer;
-      font-weight:900;
-    }
-    .sheet-body{
-      padding:12px;
-      overflow:auto;
+    .cal-detail-body{
+      max-height:34vh !important;
+      overflow:auto !important;
       -webkit-overflow-scrolling:touch;
-      color:rgba(255,255,255,.85);
       font-size:13px;
-      line-height:1.5;
-      white-space:pre-line;
     }
 </style>
 </head>
@@ -724,36 +674,18 @@
     return (js + 6) % 7;
   }
   function renderCalendar_(month, items){
-    // month: YYYY-MM ; items unused for cell display (detail uses map)
-    const [yy, mm] = month.split('-').map(Number);
-    const first = new Date(yy, mm-1, 1);
-    const firstDow = (first.getDay() + 6) % 7; // Monday=0
-    const daysInMonth = new Date(yy, mm, 0).getDate();
+    const wrap = document.getElementById('calendarWrap');
+    const grid = document.getElementById('scheduleList');
+    const detail = document.getElementById('calDetail');
+    const detailTitle = document.getElementById('calDetailTitle');
+    const detailBody = document.getElementById('calDetailBody');
+    const detailClose = document.getElementById('calDetailClose');
 
-    const today = new Date();
-    const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-
-    const grid = document.getElementById('calendarGrid');
-    if(!grid) return;
-    grid.innerHTML = '';
-
-    for(let i=0;i<42;i++){
-      const dayNum = i - firstDow + 1;
-      const inMonth = dayNum >= 1 && dayNum <= daysInMonth;
-      const dateKey = inMonth ? `${yy}-${String(mm).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}` : '';
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'cal-cell' + (inMonth ? '' : ' cal-out') + (dateKey===todayKey ? ' cal-today' : '');
-      btn.disabled = !inMonth;
-      btn.innerHTML = `<div class="cal-day">${inMonth ? dayNum : ''}</div>`;
-
-      if(inMonth){
-        btn.addEventListener('click', ()=> openDayDetail_(dateKey));
-      }
-      grid.appendChild(btn);
+    // map by date
+    const map = new Map();
+    for(const it of items){
+      if(it && it.date) map.set(it.date, it);
     }
-}
 
     const first = ymToDate_(month);
     const y = first.getFullYear();
@@ -807,17 +739,10 @@
       const it = map.get(key);
 
       const type = it ? it.type : (isOut ? '' : 'OFF');
-      const seg0 = (it && it.segments && it.segments.length) ? `${it.segments[0].start}-${it.segments[0].end}` : '';
-      const badgeTxt = (type==='WORK') ? '上班' : (type==='LEAVE' ? '請假' : (type==='OFF' ? '休' : ''));
-      const badgeCls = (type==='WORK') ? 'work' : (type==='LEAVE' ? 'off' : 'off');
 
       const cell = document.createElement('div');
       cell.className = 'cal-cell' + (isOut ? ' is-out' : '') + (isToday_(cellDate) ? ' today' : '');
-      cell.innerHTML = `
-        <div class="cal-day">${cellDate.getDate()}</div>
-        ${badgeTxt ? `<div class="cal-badge ${badgeCls}">${badgeTxt}</div>` : ``}
-        ${seg0 ? `<div class="cal-time">${seg0}</div>` : ``}
-      `;
+            cell.innerHTML = `<div class="cal-day">${cellDate.getDate()}</div>`;
       if(!isOut){
         cell.onclick = ()=> openDetail(key, it || {type:'OFF',segments:[],note:''});
       }
@@ -825,46 +750,98 @@
     }
   }
 
-async function loadSchedule(month){
-  try{
-    setScheduleStatus('', '載入中…');
 
-    // 先用快取（秒開）
-    const cached = loadCachedSchedule_(month);
-    if(cached){
-      window.__scheduleMap = cached.map || {};
-      setScheduleStatus('ok', `✅ ${month} 班表`);
-      renderCalendar_(month, []);
-      return;
-    }
-
-    const resp = await fetch('/api/schedule', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ userId: profile.userId, month })
-    });
-
-    const data = await resp.json();
-    if(!data || !data.ok){
-      setScheduleStatus('bad', (data && data.message) ? data.message : '班表讀取失敗');
-      return;
-    }
-
-    const map = {};
-    const items = data.items || [];
-    for(const it of items){
-      if(it && it.date) map[it.date] = it;
-    }
-
-    window.__scheduleMap = map;
-    saveCachedSchedule_(month, { map });
-
-    setScheduleStatus('ok', `✅ ${month} 班表`);
-    renderCalendar_(month, items);
-  }catch(err){
-    setScheduleStatus('bad', '班表載入失敗');
+  // ===== Schedule cache (fast) =====
+  const SCHEDULE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+  function schedKey_(month){ return `sched_${month}_${profile ? profile.userId : ''}`; }
+  function loadSchedCache_(month){
+    try{
+      const raw = sessionStorage.getItem(schedKey_(month)) || localStorage.getItem(schedKey_(month));
+      if(!raw) return null;
+      const obj = JSON.parse(raw);
+      if(!obj || !obj.ts || !obj.items) return null;
+      if(Date.now() - obj.ts > SCHEDULE_CACHE_TTL_MS) return null;
+      return obj.items;
+    }catch(e){ return null; }
   }
-}
+  function saveSchedCache_(month, items){
+    try{
+      const raw = JSON.stringify({ ts: Date.now(), items });
+      sessionStorage.setItem(schedKey_(month), raw);
+      try{ localStorage.setItem(schedKey_(month), raw); }catch(_){}
+    }catch(e){}
+  }
+
+
+async function loadSchedule(month){
+    try{
+      setScheduleStatus('', '載入中…');
+
+      const cached = loadSchedCache_(month);
+      if(cached){
+        setScheduleStatus('ok', `✅ ${month} 班表`);
+        renderCalendar_(month, cached);
+        return;
+      }
+
+      const resp = await fetch('/api/schedule', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ userId: profile.userId, month })
+      });
+      const data = await resp.json();
+      if(!data.ok){
+        setScheduleStatus('bad', data.message || '班表讀取失敗');
+        return;
+      }
+
+      const items = data.items || [];
+      saveSchedCache_(month, items);
+
+      setScheduleStatus('ok', `✅ ${month} 班表`);
+      renderCalendar_(month, items);
+      if(items.length===0) setScheduleStatus('warn', '這個月沒有班表資料');
+    }catch(err){
+      setScheduleStatus('bad', '班表載入失敗');
+    }
+  }
+      const items = data.items || [];
+      setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
+      renderCalendar_(month, items);
+      if(items.length===0) setScheduleStatus('warn', '這個月沒有班表資料（或你尚未同步排班）');
+    }catch(err){
+      setScheduleStatus('bad', '班表載入失敗：' + (err && err.message ? err.message : err));
+    }
+  }e_(toSend);
+
+      try{
+        await liff.sendMessages([msg]);
+      }catch(e){
+        setStatus('warn', 'Flex 發送失敗：' + fmtErr_(e));
+        await refreshState();
+        btnIn.disabled = false;
+        btnOut.disabled = false;
+        showCloseBtn();
+        return;
+      }
+
+      try{
+        liff.closeWindow();
+        return;
+      }catch(e){
+        setStatus('ok', 'Flex 已送出 ✅（若未自動關閉，請按「關閉視窗」）');
+        await refreshState();
+        btnIn.disabled = false;
+        btnOut.disabled = false;
+        showCloseBtn();
+      }
+    }catch(err){
+      setStatus('bad', '送出失敗：' + (err && err.message ? err.message : err));
+      btnIn.disabled = false;
+      btnOut.disabled = false;
+      showCloseBtn();
+    }
+  }
 
   btnIn.addEventListener('click', ()=>postClock('IN'));
   btnOut.addEventListener('click', ()=>postClock('OUT'));
@@ -882,34 +859,7 @@ async function loadSchedule(month){
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
   })();
 
-  
-  // ===== Schedule cache (avoid long loading) =====
-  const SCHEDULE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-  function cacheKey_(month){ return `sched_${month}_${profile ? profile.userId : ''}`; }
-
-  function loadCachedSchedule_(month){
-    try{
-      const key = cacheKey_(month);
-      const raw = sessionStorage.getItem(key) || localStorage.getItem(key);
-      if(!raw) return null;
-      const obj = JSON.parse(raw);
-      if(!obj || !obj.ts || !obj.data) return null;
-      if(Date.now() - obj.ts > SCHEDULE_CACHE_TTL_MS) return null;
-      return obj.data;
-    }catch(e){ return null; }
-  }
-
-  function saveCachedSchedule_(month, data){
-    try{
-      const key = cacheKey_(month);
-      const obj = { ts: Date.now(), data };
-      const raw = JSON.stringify(obj);
-      sessionStorage.setItem(key, raw);
-      try{ localStorage.setItem(key, raw); }catch(_){}
-    }catch(e){}
-  }
-function changeMonth(delta){
+  function changeMonth(delta){
     const [y,m] = currentMonth.split('-').map(Number);
     const d = new Date(y, m-1 + delta, 1);
     currentMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
@@ -962,44 +912,7 @@ function changeMonth(delta){
   }
 
   // ===== init =====
-  
-  function openDayDetail_(dateKey){
-    const map = window.__scheduleMap || {};
-    const it = map[dateKey];
-
-    const title = document.getElementById('dayTitle');
-    const body = document.getElementById('dayBody');
-    const sheet = document.getElementById('daySheet');
-    if(!title || !body || !sheet) return;
-
-    title.textContent = dateKey;
-
-    if(!it){
-      body.textContent = '無班表資料';
-    }else{
-      const type = it.type || 'WORK';
-      const segs = (it.segments && it.segments.length) ? it.segments.map(s=>`${s.start}-${s.end}`).join(' / ') : '—';
-      const note = it.note ? `\n備註：${it.note}` : '';
-      const typeZh = (type==='WORK') ? '上班' : (type==='LEAVE' ? '請假' : '休');
-      body.textContent = `狀態：${typeZh}\n時段：${segs}${note}`;
-    }
-
-    sheet.classList.remove('hidden');
-  }
-
-  function closeDayDetail_(){
-    const sheet = document.getElementById('daySheet');
-    if(sheet) sheet.classList.add('hidden');
-  }
-
-  document.addEventListener('click', (e)=>{
-    const t = e.target;
-    if(!t) return;
-    if(t.id === 'dayClose') closeDayDetail_();
-    if(t.id === 'daySheet') closeDayDetail_();
-  });
-
-async function init(){
+  async function init(){
     try{
       await liff.init({ liffId: LIFF_ID });
 
