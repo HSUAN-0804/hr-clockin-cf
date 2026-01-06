@@ -93,19 +93,12 @@
       -webkit-overflow-scrolling: touch;
     }
 
-    /* ===== Lock zoom / double-tap zoom ===== */
-    * {
-      -webkit-tap-highlight-color: transparent;
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-      user-select: none;
-      touch-action: manipulation;
-    }
-    input, textarea {
-      -webkit-user-select: text;
-      user-select: text;
-      touch-action: auto;
-    }
+    /* ===== Lock zoom (safe) ===== */
+    *{ -webkit-tap-highlight-color: transparent; }
+    /* keep text selectable in inputs */
+    input, textarea{ -webkit-user-select:text; user-select:text; }
+    /* prevent double-tap zoom on buttons only */
+    button, .tab, .cal-cell{ touch-action: manipulation; }
 
     /* debug overlay */
     .debug-overlay{position:fixed;left:10px;right:10px;bottom:10px;max-height:38vh;overflow:auto;background:rgba(0,0,0,.75);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:10px;font-size:12px;line-height:1.35;z-index:99999;display:none;white-space:pre-wrap;}
@@ -967,16 +960,6 @@
   document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
   document.addEventListener('gesturechange', function (e) { e.preventDefault(); }, { passive: false });
   document.addEventListener('gestureend', function (e) { e.preventDefault(); }, { passive: false });
-
-  // prevent double-tap to zoom (best-effort)
-  let lastTouchEnd = 0;
-  document.addEventListener('touchend', function (e) {
-    const now = Date.now();
-    if (now - lastTouchEnd <= 300) {
-      e.preventDefault();
-    }
-    lastTouchEnd = now;
-  }, { passive: false });
 </script>
 
 <div class="debug-overlay" id="debugOverlay"></div>
