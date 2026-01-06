@@ -201,10 +201,9 @@
   function saveStatusCache_(userId, data){
     try{
       localStorage.setItem(statusKey_(userId), JSON.stringify({ts: Date.now(), data}));
-    }catch(e){}
-
+    }
   // ===== Local punch guard (prevent duplicate IN/OUT even if backend slow) =====
-  const PUNCH_GUARD_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours (same day usage)
+  const PUNCH_GUARD_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
   function punchKey_(userId){ return `hr_punch_state_${userId}`; }
 
   function loadPunchGuard_(userId){
@@ -224,14 +223,14 @@
     }catch(e){}
   }
 
-  // debounce clicks per action
-  let lastClickTs = 0;
+  let lastClickTs_ = 0;
   function canClickNow_(){
     const now = Date.now();
-    if(now - lastClickTs < 1200) return false; // 1.2s
-    lastClickTs = now;
+    if(now - lastClickTs_ < 1200) return false; // 1.2s debounce
+    lastClickTs_ = now;
     return true;
   }
+catch(e){}
   }
   // 店家座標（前端計算距離用）
   const SHOP_LAT = 24.9714585;
@@ -512,17 +511,9 @@
 
       if(!canClickNow_()) return;
 
-      if(!canClickNow_()) return;
-
-      // 使用本地狀態做更嚴格防重複
-      if(act==='IN' && currentState==='IN'){
-        setStatus('warn','你目前已在上班中（請先下班 OUT）');
-        return;
-      }
-      if(act==='OUT' && currentState!=='IN'){
-        setStatus('warn','你目前未上班/已下班（請先上班 IN）');
-        return;
-      }
+      // ✅ 更嚴格本地防重複（即使後端慢）
+      if(act==='IN' && currentState==='IN'){ setStatus('warn','你目前已在上班中（請先下班 OUT）'); return; }
+      if(act==='OUT' && currentState!=='IN'){ setStatus('warn','你目前未上班/已下班（請先上班 IN）'); return; }
       if(act!=='IN' && act!=='OUT') throw new Error('無效動作');
 
       // basic local guard
@@ -642,7 +633,7 @@
 
       profile = await liff.getProfile();
 
-      // ✅ 本地防重複狀態（避免重複 IN/OUT）
+      // ✅ 本地狀態防重複（優先套用，避免重複 IN/OUT）
       const pg = loadPunchGuard_(profile.userId);
       if(pg && pg.state){
         setStateUI(pg.state);
