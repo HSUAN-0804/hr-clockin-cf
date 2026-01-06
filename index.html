@@ -876,9 +876,6 @@
         return {cls:'off', text:''};
       }
 
-      const calGrid = document.getElementById('calendarGrid');
-      calGrid.innerHTML = '';
-
       for(const c of cells){
         const key = fmtKey(c.date);
         const it = map[key] || null;
