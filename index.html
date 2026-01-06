@@ -572,14 +572,14 @@
       uidText.textContent = profile.userId || '--';
       helloEl.textContent = `嗨 ${profile.displayName || ''}`;
 
+      // ✅ 一進頁面就先快定位（不等待）
+      pillGps.textContent='定位取得中…';
+      getGpsFast();
+
       setStateUI('UNKNOWN');
       setStatus('', '讀取狀態中…');
       await refreshState();
       setStatus('ok', '狀態已更新，可以打卡。');
-
-      // background gps
-      pillGps.textContent='定位取得中…';
-      getGpsFast();
 
     }catch(err){
       setStatus('bad','初始化失敗');
