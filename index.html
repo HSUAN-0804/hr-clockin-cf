@@ -106,6 +106,103 @@
       user-select: text;
       touch-action: auto;
     }
+
+    /* ===== Calendar (Mon-Sun) ===== */
+    .calendar-weekdays{
+      display:grid;
+      grid-template-columns:repeat(7,1fr);
+      gap:8px;
+      margin-top:10px;
+      color:rgba(255,255,255,.65);
+      font-weight:800;
+      font-size:12px;
+      user-select:none;
+    }
+    .calendar-weekdays div{ text-align:center; padding:6px 0; }
+
+    .calendar-grid{
+      margin-top:8px;
+      display:grid;
+      grid-template-columns:repeat(7,1fr);
+      gap:8px;
+      max-height: 54vh;
+      overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+    }
+    .cal-cell{
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:rgba(0,0,0,.22);
+      padding:10px 10px;
+      min-height:74px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .cal-cell.inactive{ opacity:.45; }
+    .cal-cell.today{ border-color: rgba(255,255,255,.28); }
+    .cal-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:6px;
+    }
+    .cal-day{
+      font-weight:900;
+      font-size:16px;
+      color:#fff;
+      line-height:1;
+    }
+    .cal-badge{
+      font-size:11px;
+      font-weight:900;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:rgba(255,255,255,.75);
+      white-space:nowrap;
+    }
+    .cal-badge.work{ border-color: rgba(34,197,94,.35); color: rgba(220,252,231,.95); }
+    .cal-badge.off{ border-color: rgba(255,255,255,.20); color: rgba(255,255,255,.75); }
+    .cal-badge.leave{ border-color: rgba(245,158,11,.35); color: rgba(255,237,213,.95); }
+
+    .cal-slot{
+      font-weight:800;
+      font-size:12px;
+      color:rgba(255,255,255,.90);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .cal-note{
+      font-size:11px;
+      color:rgba(255,255,255,.55);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .calendar-detail{
+      margin-top:10px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:rgba(0,0,0,.22);
+      padding:12px;
+      color:rgba(255,255,255,.90);
+      display:none;
+    }
+    .detail-title{ font-weight:900; margin-bottom:8px; }
+    .detail-line{ color:rgba(255,255,255,.75); font-size:13px; line-height:1.5; }
+    .detail-chip{
+      display:inline-block;
+      margin-left:6px;
+      font-size:12px;
+      font-weight:900;
+      padding:3px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:rgba(255,255,255,.85);
+    }
 </style>
 </head>
 <body>
@@ -156,7 +253,9 @@
       </div>
 
       <div class="status" id="scheduleStatus">尚未載入…</div>
-      <div class="list" id="scheduleList"></div>
+      <div class="calendar-weekdays" id="calWeekdays"></div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+      <div class="calendar-detail" id="calendarDetail"></div>
       <div class="mini">班表來源：shift_overrides ＞ shift_month（PT）＞ shift_templates（FT）。</div>
     </div>
   </div>
@@ -699,12 +798,136 @@
   async function loadSchedule(month){
     try{
       setScheduleStatus('', '載入班表中…');
-      scheduleList.innerHTML = '';
+      const calGrid = document.getElementById('calendarGrid');
+      const calDetail = document.getElementById('calendarDetail');
+      if (calDetail) calDetail.style.display = 'none';
+      if (calGrid) calGrid.innerHTML = '';
+
       const resp = await fetch('/api/schedule', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ userId: profile.userId, month })
       });
+
+      const data = await resp.json();
+      if(!data.ok){
+        setScheduleStatus('bad', data.message || '班表讀取失敗');
+        return;
+      }
+
+      setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
+
+      const items = data.items || [];
+      // map date -> item
+      const map = {};
+      for(const it of items){
+        map[it.date] = it;
+      }
+
+      // render weekdays (Mon-Sun)
+      const weekdays = ['一','二','三','四','五','六','日'];
+      const wdEl = document.getElementById('calWeekdays');
+      if (wdEl && !wdEl.dataset.ready){
+        wdEl.innerHTML = weekdays.map(w=>`<div>週${w}</div>`).join('');
+        wdEl.dataset.ready = '1';
+      }
+
+      // month calendar days
+      const [y,m] = month.split('-').map(Number);
+      const first = new Date(y, m-1, 1);
+      // JS getDay(): Sun=0..Sat=6 ; we want Mon=0..Sun=6
+      const dowMon = (first.getDay() + 6) % 7;
+      const daysInMonth = new Date(y, m, 0).getDate();
+
+      // Include leading days from previous month to fill first week
+      const prevDays = dowMon;
+      const prevLast = new Date(y, m-1, 0).getDate();
+
+      const cells = [];
+      for(let i=prevDays; i>0; i--){
+        const day = prevLast - i + 1;
+        const date = new Date(y, m-2, day);
+        cells.push({ date, inMonth:false });
+      }
+      for(let day=1; day<=daysInMonth; day++){
+        cells.push({ date: new Date(y, m-1, day), inMonth:true });
+      }
+      // trailing to complete 6 weeks grid (42 cells)
+      while(cells.length % 7 !== 0) cells.push({ date: new Date(y, m-1, daysInMonth + (cells.length - (prevDays+daysInMonth) + 1)), inMonth:false });
+      while(cells.length < 42) cells.push({ date: new Date(y, m-1, daysInMonth + (cells.length - (prevDays+daysInMonth) + 1)), inMonth:false });
+
+      const today = new Date();
+      const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+      const fmtKey = (d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+      function segText(segs){
+        if(!segs || !segs.length) return '';
+        // show first segment
+        const s = segs[0];
+        return `${s.start}-${s.end}`;
+      }
+
+      function typeBadge(it){
+        const t = (it && it.type) ? String(it.type) : '';
+        if (t === 'WORK') return {cls:'work', text:'上班'};
+        if (t === 'LEAVE') return {cls:'leave', text:'請假'};
+        if (t === 'OFF') return {cls:'off', text:'休' };
+        return {cls:'off', text:''};
+      }
+
+      const calGrid = document.getElementById('calendarGrid');
+      calGrid.innerHTML = '';
+
+      for(const c of cells){
+        const key = fmtKey(c.date);
+        const it = map[key] || null;
+        const badge = typeBadge(it);
+
+        const isToday = (key === todayKey);
+        const cls = ['cal-cell', c.inMonth ? '' : 'inactive', isToday ? 'today' : ''].filter(Boolean).join(' ');
+
+        const dayNum = c.date.getDate();
+        const slot = it && it.type === 'WORK' ? segText(it.segments) : '';
+        const note = it && it.note ? it.note : '';
+
+        const div = document.createElement('div');
+        div.className = cls;
+        div.innerHTML = `
+          <div class="cal-top">
+            <div class="cal-day">${dayNum}</div>
+            ${badge.text ? `<div class="cal-badge ${badge.cls}">${badge.text}</div>` : `<div class="cal-badge off" style="opacity:.0">.</div>`}
+          </div>
+          <div class="cal-slot">${slot || '&nbsp;'}</div>
+          <div class="cal-note">${note ? note : '&nbsp;'}</div>
+        `;
+        div.addEventListener('click', ()=>{
+          const detail = document.getElementById('calendarDetail');
+          if(!detail) return;
+
+          const title = `${key}`;
+          let badgeTxt = badge.text || '—';
+          const segs = (it && it.segments && it.segments.length) ? it.segments.map(s=>`${s.start}-${s.end}`).join(' / ') : '—';
+          const noteTxt = note || '—';
+
+          detail.innerHTML = `
+            <div class="detail-title">${title}<span class="detail-chip">${badgeTxt}</span></div>
+            <div class="detail-line">時段：${segs}</div>
+            <div class="detail-line">備註：${noteTxt}</div>
+          `;
+          detail.style.display = 'block';
+        });
+
+        calGrid.appendChild(div);
+      }
+
+      if(items.length===0){
+        setScheduleStatus('warn', '這個月沒有班表資料（或你尚未同步排班）');
+      }
+    }catch(err){
+      setScheduleStatus('bad', '班表載入失敗：' + (err && err.message ? err.message : err));
+    }
+  });
       const data = await resp.json();
       if(!data.ok){
         setScheduleStatus('bad', data.message || '班表讀取失敗');
