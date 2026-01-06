@@ -134,13 +134,16 @@
     .cal-detail-k{ color:rgba(255,255,255,.55); }
     .cal-detail-v{ color:#fff; font-weight:800; text-align:right; white-space:pre-line; }
 
-    /* ===== Calendar: show date only ===== */
+    /* ===== Calendar: date only ===== */
     .cal-cell{ display:flex; align-items:center; justify-content:center; padding:10px 6px; }
-    .cal-day{ font-weight:900; font-size:16px; color:rgba(255,255,255,.92); }
-    .cal-cell.is-out .cal-day{ color:rgba(255,255,255,.35); }
+    .cal-day{ font-weight:900; font-size:16px; }
+    .cal-cell.is-out .cal-day{ opacity:.35; }
     .cal-cell.today{ outline:2px solid rgba(255,255,255,.25); outline-offset:-2px; }
 
-    /* ===== Detail popup: smaller & scrollable ===== */
+    /* Hide badge/time if any leftover */
+    .cal-badge, .cal-time{ display:none !important; }
+
+    /* ===== Detail popup: smaller ===== */
     .cal-detail-card{ width:min(420px, 100%); max-height:55vh; }
     .cal-detail-body{ max-height:45vh; overflow:auto; -webkit-overflow-scrolling:touch; }
 </style>
@@ -739,7 +742,7 @@
 
       const cell = document.createElement('div');
       cell.className = 'cal-cell' + (isOut ? ' is-out' : '') + (isToday_(cellDate) ? ' today' : '');
-            cell.innerHTML = `<div class="cal-day">${cellDate.getDate()}</div>`;
+      cell.innerHTML = `<div class="cal-day">${cellDate.getDate()}</div>`;
       if(!isOut){
         cell.onclick = ()=> openDetail(key, it || {type:'OFF',segments:[],note:''});
       }
@@ -757,14 +760,14 @@ async function loadSchedule(month){
       if(cached){
         try{
           const obj = JSON.parse(cached);
-          if(obj && obj.items){
+          if(obj && Array.isArray(obj.items)){
             renderCalendar_(month, obj.items);
             setScheduleStatus('ok', `✅ 已載入 ${month} 班表（快取）`);
           }
         }catch(_){}
       }
 
-      // 再背景更新（不阻塞 UI）：最多等 3.5 秒
+      // 背景更新：最多等 3.5 秒
       const controller = new AbortController();
       const timer = setTimeout(()=>controller.abort(), 3500);
 
@@ -777,10 +780,9 @@ async function loadSchedule(month){
 
       clearTimeout(timer);
 
-      const data = await resp.json();
-      if(!data.ok){
-        // 若快取已渲染，就只提示；不要覆蓋畫面
-        setScheduleStatus('warn', data.message || '班表讀取失敗（已顯示快取）');
+      const data = await resp.json().catch(()=>null);
+      if(!data || !data.ok){
+        setScheduleStatus('warn', (data && data.message) ? data.message : '班表讀取失敗（已顯示快取）');
         return;
       }
 
@@ -791,7 +793,8 @@ async function loadSchedule(month){
       setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
       if(items.length===0) setScheduleStatus('warn', '這個月沒有班表資料（或你尚未同步排班）');
     }catch(err){
-      setScheduleStatus('warn', '班表載入較慢（若有快取會先顯示）');
+      // 若已有快取，不覆蓋；若沒快取，提示
+      setScheduleStatus('warn', '班表載入較慢，請稍後再試（若有快取會先顯示）');
     }
   });
       const data = await resp.json();
