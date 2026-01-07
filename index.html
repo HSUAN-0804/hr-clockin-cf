@@ -8,132 +8,106 @@
   <style>
     :root{
       --bg:#0b0c10;--text:#f5f5f7;--muted:#b7bbc3;--border:rgba(255,255,255,.08);
-      --radius:18px;--gold:rgba(255,255,255,.80);
+      --radius:18px;--accent:rgba(255,255,255,.80);
     }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
-      background:radial-gradient(1200px 800px at 50% -20%, rgba(255,255,255,.08), transparent 50%),
-                 radial-gradient(900px 600px at 0% 0%, rgba(59,130,246,.10), transparent 55%),
-                 var(--bg);color:var(--text)}
-    .wrap{max-width:640px;margin:0 auto;padding:18px 14px 28px}
-    .brand{font-weight:800;letter-spacing:.5px;font-size:14px;color:var(--gold)}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation;}
+    input,textarea{-webkit-user-select:text;user-select:text;touch-action:auto;}
+    html, body { height: 100%; overflow: hidden; }
+    body{
+      margin:0;
+      font-family:ui-sans-serif,system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+      background:
+        radial-gradient(1200px 800px at 50% -20%, rgba(255,255,255,.06), transparent 50%),
+        radial-gradient(900px 600px at 0% 0%, rgba(59,130,246,.10), transparent 55%),
+        var(--bg);
+      color:var(--text);
+    }
+    .wrap{max-width:640px;margin:0 auto;padding:18px 14px 28px;height:100vh;overflow:hidden;}
+    .brand{font-weight:800;letter-spacing:.5px;font-size:14px;color:var(--accent)}
     .title{margin:6px 0 12px;font-size:26px;font-weight:900}
     .tabs{display:flex;gap:10px;margin:10px 0 12px}
-    .tab{flex:1;border:1px solid var(--border);background:rgba(255,255,255,.04);color:rgba(255,255,255,.85);
-      padding:10px 12px;border-radius:14px;font-weight:900;text-align:center;cursor:pointer;user-select:none}
+    .tab{
+      flex:1;border:1px solid var(--border);background:rgba(255,255,255,.04);color:rgba(255,255,255,.85);
+      padding:10px 12px;border-radius:14px;font-weight:900;text-align:center;cursor:pointer;user-select:none
+    }
     .tab.active{border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff}
-    .card{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 16px 42px rgba(0,0,0,.35)}
-    .row{display:flex;gap:12px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
-    .pill{display:inline-flex;align-items:flex-end;gap:8px;padding:8px 10px;border-radius:999px;border:1px solid var(--border);
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 16px 42px rgba(0,0,0,.35)
+    }
+    .row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;border:1px solid var(--border);
       background:rgba(0,0,0,.25);color:var(--muted);font-size:13px}
     .clock{font-size:44px;font-weight:900;letter-spacing:1px;margin:10px 0 8px}
     .sub{color:var(--muted);font-size:13px;line-height:1.4}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
-    button{width:100%;border:none;border-radius:16px;padding:14px 14px;font-size:18px;font-weight:900;color:var(--text);
-      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));border:1px solid var(--border);cursor:pointer}
-    button:active{transform:scale(.99)}
-    .status{margin-top:12px;padding:12px 12px;border-radius:14px;border:1px solid var(--border);
-      background:rgba(0,0,0,.22);font-size:14px;line-height:1.4;color:var(--muted)}
-    .status.ok{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95)}
-    .status.bad{border-color:rgba(239,68,68,.38);color:rgba(254,226,226,.95)}
-    .status.warn{border-color:rgba(245,158,11,.35);color:rgba(255,237,213,.95)}
     .kv{display:grid;grid-template-columns:110px 1fr;gap:8px;margin-top:10px}
     .kv div{font-size:13px;color:var(--muted)}
     .kv b{color:var(--text);font-weight:800;word-break:break-all}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+    button{
+      width:100%;border:none;border-radius:16px;padding:14px 14px;font-size:18px;font-weight:900;color:var(--text);
+      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      border:1px solid var(--border);cursor:pointer
+    }
+    button:active{transform:scale(.99)}
+    button[disabled]{opacity:.55;cursor:not-allowed}
+    .status{
+      margin-top:12px;padding:12px 12px;border-radius:14px;border:1px solid var(--border);
+      background:rgba(0,0,0,.22);font-size:14px;line-height:1.4;color:var(--muted);white-space:pre-line
+    }
+    .status.ok{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95)}
+    .status.bad{border-color:rgba(239,68,68,.38);color:rgba(254,226,226,.95)}
+    .status.warn{border-color:rgba(245,158,11,.35);color:rgba(255,237,213,.95)}
     .mini{margin-top:12px;color:rgba(255,255,255,.55);font-size:12px}
     .softbtn{margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
-      background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.20);color:rgba(255,255,255,.92);
-      cursor:pointer;display:none}
+      background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.20);color:rgba(255,255,255,.92);cursor:pointer;display:none}
     .closebtn{margin-top:10px;width:100%;border-radius:14px;padding:12px;font-size:14px;font-weight:900;
       background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.96);
       cursor:pointer;display:none}
     .hidden{display:none}
-    /* schedule */
-    .scheduleTop{display:flex;gap:10px;align-items:flex-end;margin:8px 0 12px}
-    .monthBox{flex:1;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.04);
-      padding:10px 12px;color:#fff;font-weight:900;display:flex;justify-content:space-between;align-items:center}
-    .monthBtn{flex:0 0 auto;padding:10px 12px;border-radius:14px;font-weight:900}
-    .list{margin-top:10px;display:flex;flex-direction:column;gap:10px}
-    .item{border:1px solid var(--border);border-radius:14px;padding:12px;background:rgba(0,0,0,.22);
-      display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-    .item .d{font-weight:900}
-    .badge{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
-    .badge.work{border-color:rgba(34,197,94,.35);color:rgba(220,252,231,.95)}
-    .badge.off{border-color:rgba(239,68,68,.35);color:rgba(254,226,226,.95)}
-    .seg{color:#fff;font-weight:800}
-    .note{color:rgba(255,255,255,.60);font-size:12px;margin-top:4px}
-  
-    /* ===== UX Fix: no page scrolling ===== */
-    html, body { height: 100%; overflow: hidden; }
-    .wrap { height: 100vh; overflow: hidden; }
-    /* prevent scroll bounce inside panels unless explicitly allowed */
-    #panelClock, #panelSchedule { overflow: hidden; }
 
-    /* ===== Schedule header sizing ===== */
-    .scheduleTop{ gap:8px; }
+    /* ===== Schedule ===== */
+    #panelSchedule{overflow:hidden;}
+    .scheduleTop{display:flex;gap:8px;align-items:center;margin:8px 0 12px}
     .monthBox{
-      padding:10px 12px;
-      border-radius:14px;
-      min-width: 0;
+      flex:1;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.04);
+      padding:10px 12px;color:#fff;font-weight:900;display:flex;justify-content:space-between;align-items:center;min-width:0;
     }
-    /* make prev/next buttons compact */
     .monthBtn{
-      width: auto;
-      min-width: 74px;
-      padding:10px 12px;
-      border-radius:14px;
-      font-size:14px;
-      font-weight:900;
-    }
-    /* keep schedule list within card and scroll internally if too long */
-    #scheduleList{
-      max-height: 52vh;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
+      width:auto;min-width:74px;
+      padding:10px 12px;border-radius:14px;font-size:14px;font-weight:900;
     }
 
-    /* ===== Lock zoom / double-tap zoom ===== */
-    * {
-      -webkit-tap-highlight-color: transparent;
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-      user-select: none;
-      touch-action: manipulation;
+    /* Calendar grid: only dates */
+    .cal-wrap{margin-top:10px;}
+    .cal-week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
+    .cal-week div{font-size:12px;color:rgba(255,255,255,.65);text-align:center;}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+    .cal-cell{
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:rgba(0,0,0,.18);
+      min-height:44px;
+      padding:6px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:flex-start;
+      cursor:pointer;
     }
-    input, textarea {
-      -webkit-user-select: text;
-      user-select: text;
-      touch-action: auto;
-    }
+    .cal-cell.is-out{opacity:.35}
+    .cal-cell.today{border-color:rgba(255,255,255,.35)}
+    .cal-day{font-weight:900;font-size:14px;color:#fff}
 
-    /* ===== Calendar ===== */
-    .calendar{ margin-top: 10px; border:1px solid var(--border); border-radius:14px; background:rgba(0,0,0,.18); overflow:hidden; }
-    .cal-weekdays{ display:grid; grid-template-columns:repeat(7,1fr); gap:0; border-bottom:1px solid var(--border); }
-    .cal-weekdays > div{ text-align:center; padding:8px 0; font-size:12px; color:rgba(255,255,255,.70); }
-    .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:0; }
-    .cal-cell{ border-right:1px solid var(--border); border-bottom:1px solid var(--border); min-height:44px; padding:6px; position:relative; }
-    .cal-cell:nth-child(7n){ border-right:none; }
-    .cal-cell.is-out{ opacity:.35; }
-    .cal-day{ font-size:13px; font-weight:900; color:rgba(255,255,255,.92); }
-    .cal-badge{ margin-top:6px; font-size:11px; padding:3px 8px; border-radius:999px; display:inline-block; border:1px solid var(--border); color:rgba(255,255,255,.85); background:rgba(255,255,255,.06); }
-    .cal-badge.work{ border-color:rgba(255,255,255,.22); }
-    .cal-badge.off{ opacity:.9; }
-    .cal-time{ margin-top:6px; font-size:11px; color:rgba(255,255,255,.70); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .cal-cell.today{ outline:2px solid rgba(255,255,255,.35); outline-offset:-2px; border-radius:8px; }
-
-    .cal-detail{ position:fixed; inset:0; display:flex; align-items:flex-end; justify-content:center; padding:12px; background:rgba(0,0,0,.55); z-index:999; }
-    .cal-detail.hidden{ display:none; }
-    .cal-detail-card{ width:min(640px, 100%); max-height:38vh; border-radius:18px; border:1px solid var(--border); background:rgba(15,18,24,.96); box-shadow:0 20px 60px rgba(0,0,0,.55); overflow:hidden; }
-    .cal-detail-head{ display:flex; align-items:flex-end; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--border); }
-    .cal-detail-title{ font-weight:900; color:#fff; }
-    .cal-detail-close{ border:none; background:rgba(255,255,255,.10); color:#fff; width:36px; height:36px; border-radius:12px; font-weight:900; }
-    .cal-detail-body{ padding:12px 14px; max-height:28vh; overflow:auto; -webkit-overflow-scrolling:touch; color:rgba(255,255,255,.85); font-size:14px; line-height:1.5; }
-    .cal-detail-row{ display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.06); }
-    .cal-detail-row:last-child{ border-bottom:none; }
-    .cal-detail-k{ color:rgba(255,255,255,.55); }
-    .cal-detail-v{ color:#fff; font-weight:800; text-align:right; white-space:pre-line; }
-</style>
+    /* Detail bottom sheet (small) */
+    .cal-detail{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;padding:12px;}
+    .cal-detail.show{display:flex}
+    .cal-detail-card{width:min(640px,100%);max-height:38vh;background:rgba(17,19,24,.98);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+    .cal-detail-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);}
+    .cal-detail-head .t{font-weight:900}
+    .cal-detail-close{border:none;background:transparent;color:#fff;font-size:18px;font-weight:900;cursor:pointer;padding:6px 10px;border-radius:10px}
+    .cal-detail-body{padding:12px 14px;max-height:28vh;overflow:auto;-webkit-overflow-scrolling:touch;}
+    .cal-detail-body .line{color:rgba(255,255,255,.85);font-size:14px;line-height:1.5;margin-bottom:8px}
+  </style>
 </head>
 <body>
   <div class="wrap">
@@ -149,6 +123,7 @@
       <div class="row">
         <div class="pill" id="pillLogin">尚未登入</div>
         <div class="pill" id="pillGps">定位未取得</div>
+        <div class="pill" id="pillState">狀態：讀取中</div>
       </div>
 
       <div class="clock" id="clock">--:--</div>
@@ -184,51 +159,40 @@
 
       <div class="status" id="scheduleStatus">尚未載入…</div>
 
-      <!-- 月曆（週一為第一天） -->
-      <div class="calendar" id="calendarWrap">
-        <div class="cal-weekdays" id="calWeekdays">
+      <div class="cal-wrap">
+        <div class="cal-week" id="calWeek">
           <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
         </div>
-        <div class="cal-grid" id="scheduleList"></div>
+        <div class="cal-grid" id="calGrid"></div>
       </div>
 
-      <!-- 點日期的明細卡 -->
-      <div class="cal-detail hidden" id="calDetail">
-        <div class="cal-detail-card">
-          <div class="cal-detail-head">
-            <div class="cal-detail-title" id="calDetailTitle">----</div>
-            <button class="cal-detail-close" id="calDetailClose" type="button">✕</button>
-          </div>
-          <div class="cal-detail-body" id="calDetailBody"></div>
-        </div>
-      </div>
+      <div class="mini">班表來源：shift_overrides ＞ shift_month（PT) ＞ shift_templates（FT）。</div>
+    </div>
+  </div>
 
-      <div class="mini">班表來源：shift_overrides ＞ shift_month（PT）＞ shift_templates（FT）。</div>
+  <div class="cal-detail" id="calDetail">
+    <div class="cal-detail-card">
+      <div class="cal-detail-head">
+        <div class="t" id="calDetailTitle">2026-01-01</div>
+        <button class="cal-detail-close" id="calDetailClose">✕</button>
+      </div>
+      <div class="cal-detail-body" id="calDetailBody"></div>
     </div>
   </div>
 
 <script>
-  // ===== 基本設定 =====
   const LIFF_ID = "2008810311-jmqyUaTN";
-
-  // 店家座標（前端計算距離用）
   const SHOP_LAT = 24.9714585;
   const SHOP_LNG = 121.2242778;
-  const FENCE_M  = 500; // 圍欄半徑（公尺），請與 GS 的 GEOFENCE_METERS 一致
-
-  const BACKEND_TIMEOUT_MS = 700; // 0.7 秒內拿得到後端就用後端 flex；否則走 fallback
+  const FENCE_M  = 500;
 
   const el = (id)=>document.getElementById(id);
+  const tabClock = el('tabClock'), tabSchedule = el('tabSchedule');
+  const panelClock = el('panelClock'), panelSchedule = el('panelSchedule');
 
-  // Tabs / Panels
-  const tabClock = el('tabClock');
-  const tabSchedule = el('tabSchedule');
-  const panelClock = el('panelClock');
-  const panelSchedule = el('panelSchedule');
-
-  // UI elements
   const pillLogin = el('pillLogin');
   const pillGps = el('pillGps');
+  const pillState = el('pillState');
   const helloEl = el('hello');
   const statusBox = el('statusBox');
   const distText = el('distText');
@@ -242,31 +206,20 @@
   const btnPrev = el('btnPrev');
   const btnNext = el('btnNext');
   const scheduleStatus = el('scheduleStatus');
-  const scheduleList = el('scheduleList');
+  const calGrid = el('calGrid');
+
+  const detail = el('calDetail');
+  const detailTitle = el('calDetailTitle');
+  const detailBody = el('calDetailBody');
+  const detailClose = el('calDetailClose');
 
   const btnIn = el('btnIn');
   const btnOut = el('btnOut');
 
-  // Runtime state
   let profile = null;
   let lastPos = null;
   let lastDistM = null;
-  let currentState = 'UNKNOWN'; // EMPTY/OFF/IN/UNKNOWN
-  window.__empDisplayName = '';
-
-  // ===== UI helpers =====
-  function setTab(which){
-    if(which==='clock'){
-      tabClock.classList.add('active'); tabSchedule.classList.remove('active');
-      panelClock.classList.remove('hidden'); panelSchedule.classList.add('hidden');
-    }else{
-      tabSchedule.classList.add('active'); tabClock.classList.remove('active');
-      panelSchedule.classList.remove('hidden'); panelClock.classList.add('hidden');
-      if(profile && profile.userId) loadSchedule(currentMonth);
-    }
-  }
-  tabClock.addEventListener('click', ()=>setTab('clock'));
-  tabSchedule.addEventListener('click', ()=>setTab('schedule'));
+  let currentState = 'UNKNOWN';
 
   function setStatus(type, text){
     statusBox.className = 'status ' + (type || '');
@@ -283,12 +236,13 @@
     const s = String(state||'UNKNOWN').toUpperCase();
     currentState = s;
     if (s === 'IN'){
-      // 上班中：只能 OUT
+      pillState.textContent = '狀態：上班中';
       btnIn.disabled = true;
       btnOut.disabled = false;
       return;
     }
-    // EMPTY / OFF / UNKNOWN：只能 IN
+    if (s === 'EMPTY') pillState.textContent = '狀態：紀錄空白';
+    else pillState.textContent = '狀態：未上班/已下班';
     btnIn.disabled = false;
     btnOut.disabled = true;
   }
@@ -299,15 +253,6 @@
   }
   setInterval(tickClock, 1000); tickClock();
 
-  function fmtErr_(e){
-    const code = (e && (e.code ?? e.status)) ? (e.code ?? e.status) : '';
-    const msg  = e && e.message ? e.message : String(e || '');
-    let raw = '';
-    try{ raw = JSON.stringify(e); }catch(_){}
-    return (code ? `CODE:${code} ` : '') + msg + (raw ? `\nraw=${raw}` : '');
-  }
-
-  // ===== 距離計算 =====
   function haversineMeters_(lat1, lng1, lat2, lng2){
     const R = 6371000;
     const toRad = (x)=>x*Math.PI/180;
@@ -323,57 +268,45 @@
     return `${d}m / ${FENCE_M}m（${inRange ? '範圍內' : '超出'}）`;
   }
 
-  function getCurrentPositionP_(options){
-    return new Promise((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve(pos),
-        () => resolve(null),
-        options
-      );
-    });
-  }
-
-  // ✅ 開頁用：快速定位（允許快取、低精度）
-  async function getGpsFast(){
-    const pos = await getCurrentPositionP_({
-      enableHighAccuracy: false,
-      timeout: 2500,
-      maximumAge: 60000
-    });
-    if(pos){
-      lastPos = pos;
-      lastDistM = haversineMeters_(SHOP_LAT, SHOP_LNG, pos.coords.latitude, pos.coords.longitude);
-      pillGps.textContent='定位已取得';
-      distText.textContent = formatDistText_(lastDistM);
+  // ===== Flex sanitize (keep flex) =====
+  function sanitizeFlex_(obj){
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)){
+      const out = [];
+      for (const x of obj){
+        const y = sanitizeFlex_(x);
+        if (y === null) continue;
+        out.push(y);
+      }
+      return out;
     }
-    return pos;
-  }
-
-  // ✅ 打卡用：精準定位（20~50m 建議用這個）
-  async function getGpsAccurate(){
-    const pos = await getCurrentPositionP_({
-      enableHighAccuracy: true,
-      timeout: 12000,
-      maximumAge: 0
-    });
-    if(pos){
-      lastPos = pos;
-      lastDistM = haversineMeters_(SHOP_LAT, SHOP_LNG, pos.coords.latitude, pos.coords.longitude);
-      pillGps.textContent='定位已取得';
-      distText.textContent = formatDistText_(lastDistM);
+    if (typeof obj === 'object'){
+      if (obj.type === 'filler') return null;
+      const out = {};
+      for (const [k,v] of Object.entries(obj)){
+        if (k === 'paddingStart' || k === 'paddingEnd') continue;
+        if (k === 'size' && obj.type === 'bubble') continue;
+        out[k] = sanitizeFlex_(v);
+      }
+      return out;
     }
-    return pos;
+    return obj;
+  }
+  function normalizeFlexMessage_(flex){
+    let obj = flex;
+    if (typeof obj === 'string'){
+      try{ obj = JSON.parse(obj); }catch(e){}
+    }
+    if (obj && obj.type === 'bubble'){
+      obj = { type:'flex', altText:'打卡系統', contents: obj };
+    }
+    if (obj && obj.type === 'flex' && !obj.altText) obj.altText = '打卡系統';
+    try{ obj = JSON.parse(JSON.stringify(obj)); }catch(e){}
+    obj = sanitizeFlex_(obj);
+    return obj;
   }
 
-  // ===== 員工名稱（display_name） =====
-  function getEmpNameCached_(){
-    try{ return localStorage.getItem('empDisplayName') || ''; }catch(e){ return ''; }
-  }
-  function setEmpNameCached_(name){
-    try{ localStorage.setItem('empDisplayName', String(name||'')); }catch(e){}
-  }
   async function fetchEmpDisplayName_(timeoutMs){
-    if(!profile || !profile.userId) return '';
     try{
       const controller = new AbortController();
       const timer = setTimeout(()=>controller.abort(), timeoutMs || 250);
@@ -385,14 +318,42 @@
       });
       clearTimeout(timer);
       const data = await resp.json().catch(()=>null);
-      if(data && data.ok && data.display_name){
-        return String(data.display_name).trim();
-      }
+      if(data && data.ok && data.display_name) return String(data.display_name).trim();
     }catch(e){}
     return '';
   }
 
-  // ===== 後端狀態同步（也順便拿 display_name）=====
+  // ===== GPS two-stage =====
+  function getCurrentPositionP_(options){
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve(pos),
+        () => resolve(null),
+        options
+      );
+    });
+  }
+  async function getGpsFast(){
+    const pos = await getCurrentPositionP_({ enableHighAccuracy:false, timeout:2500, maximumAge:60000 });
+    if(pos){
+      lastPos = pos;
+      lastDistM = haversineMeters_(SHOP_LAT, SHOP_LNG, pos.coords.latitude, pos.coords.longitude);
+      pillGps.textContent='定位已取得';
+      distText.textContent = formatDistText_(lastDistM);
+    }
+    return pos;
+  }
+  async function getGpsAccurate(){
+    const pos = await getCurrentPositionP_({ enableHighAccuracy:true, timeout:12000, maximumAge:0 });
+    if(pos){
+      lastPos = pos;
+      lastDistM = haversineMeters_(SHOP_LAT, SHOP_LNG, pos.coords.latitude, pos.coords.longitude);
+      pillGps.textContent='定位已取得';
+      distText.textContent = formatDistText_(lastDistM);
+    }
+    return pos;
+  }
+
   async function refreshState(){
     if(!profile || !profile.userId) return;
     try{
@@ -402,24 +363,13 @@
         body: JSON.stringify({ action:'STATUS', userId: profile.userId })
       });
       const data = await resp.json().catch(()=>null);
-      if(data && data.ok){
-        if(data.state) setStateUI(data.state);
-        if(data.display_name){
-          const dn = String(data.display_name).trim();
-          if(dn){
-            window.__empDisplayName = dn;
-            setEmpNameCached_(dn);
-          }
-        }
-      }else{
-        setStateUI('OFF');
-      }
+      if(data && data.ok && data.state) setStateUI(data.state);
+      else setStateUI('OFF');
     }catch(e){
       setStateUI('OFF');
     }
   }
 
-  // ===== 背景寫入 =====
   function queueClockWrite_(payload){
     try{
       if (navigator.sendBeacon){
@@ -429,70 +379,18 @@
       }
     }catch(e){}
     try{
-      fetch('/api/clock', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(payload),
-        keepalive:true
-      }).catch(()=>{});
+      fetch('/api/clock', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload), keepalive:true }).catch(()=>{});
       return true;
     }catch(e){}
     return false;
   }
 
-  // ===== Flex sanitize =====
-  function sanitizeFlex_(obj){
-    if (obj === null || obj === undefined) return obj;
-
-    if (Array.isArray(obj)){
-      const out = [];
-      for (const x of obj){
-        const y = sanitizeFlex_(x);
-        if (y === null) continue;
-        out.push(y);
-      }
-      return out;
-    }
-
-    if (typeof obj === 'object'){
-      if (obj.type === 'filler') return null;
-
-      const out = {};
-      for (const [k,v] of Object.entries(obj)){
-        // 移除較常被 LIFF 嚴格驗證挑出的屬性
-        if (k === 'paddingStart' || k === 'paddingEnd') continue;
-        if (k === 'size' && obj.type === 'bubble') continue;
-        out[k] = sanitizeFlex_(v);
-      }
-      return out;
-    }
-
-    return obj;
-  }
-
-  function normalizeFlexMessage_(flex){
-    let obj = flex;
-
-    if (typeof obj === 'string'){
-      try{ obj = JSON.parse(obj); }catch(_){}
-    }
-    if (obj && obj.type === 'bubble'){
-      obj = { type:'flex', altText:'打卡系統', contents: obj };
-    }
-    if (obj && obj.type === 'flex' && !obj.altText) obj.altText = '打卡系統';
-
-    try{ obj = JSON.parse(JSON.stringify(obj)); }catch(_){}
-    obj = sanitizeFlex_(obj);
-    return obj;
-  }
-
-  // ===== fallback Flex（本地）=====
   function buildLocalFlex_(act, name, hhmm, dateStr, timeStr, distM){
     const titleLine = (act==='IN' ? '上班打卡 ' : '下班打卡 ') + hhmm;
 
     const d = Math.round(Number(distM || 0));
     const inRange = d <= FENCE_M;
-    const distText = `${d}m / ${FENCE_M}m（${inRange ? '範圍內' : '超出'}）`;
+    const distText2 = `${d}m / ${FENCE_M}m（${inRange ? '範圍內' : '超出'}）`;
     const distColor = inRange ? '#166534' : '#B91C1C';
 
     const statusText = (act==='IN') ? '上班' : '下班';
@@ -537,7 +435,7 @@
       altText:'打卡成功',
       contents:{
         type:'bubble',
-        styles:{ body:{backgroundColor:'#FFFFFF'}, footer:{backgroundColor:'#FFFFFF'} },
+        styles:{ body:{ backgroundColor:'#FFFFFF' }, footer:{ backgroundColor:'#FFFFFF' } },
         body:{
           type:'box',
           layout:'vertical',
@@ -550,7 +448,7 @@
             { type:'separator', margin:'md', color:'#E5E7EB' },
             rowText('日期', dateStr, '#111827'),
             rowText('時間', timeStr, '#111827'),
-            rowText('距離', distText, distColor),
+            rowText('距離', distText2, distColor),
             rowChipRight('狀態', statusChip)
           ]
         },
@@ -566,67 +464,201 @@
     };
   }
 
-  // ===== 打卡送出（0.7s 優先後端，超時 fallback）=====
+  // ===== Schedule cache/render (split init) =====
+  const scheduleCache_ = new Map();
+  function schedKey_(month){ return `sched:${profile ? profile.userId : ''}:${month}`; }
+  function readSchedCache_(month){
+    try{
+      const raw = localStorage.getItem(schedKey_(month));
+      if(!raw) return null;
+      const obj = JSON.parse(raw);
+      if(obj && obj.ts && (Date.now() - obj.ts) < 30*60*1000 && Array.isArray(obj.items)) return obj.items;
+    }catch(e){}
+    return null;
+  }
+  function writeSchedCache_(month, items){
+    try{
+      scheduleCache_.set(month, items);
+      localStorage.setItem(schedKey_(month), JSON.stringify({ts: Date.now(), items}));
+    }catch(e){}
+  }
+
+  function ym_(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+  let currentMonth = ym_(new Date());
+  monthLabel.textContent = currentMonth;
+
+  function isToday_(d){
+    const now = new Date();
+    return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth() && d.getDate()===now.getDate();
+  }
+  function toDateKey_(d){
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function openDetail(dateKey, item){
+    detailTitle.textContent = dateKey;
+    const segs = (item && item.segments && item.segments.length) ? item.segments.map(s=>`${s.start}-${s.end}`).join(' / ') : '—';
+    const type = item && item.type ? item.type : 'OFF';
+    const note = item && item.note ? item.note : '';
+    detailBody.innerHTML = `
+      <div class="line">狀態：${type}</div>
+      <div class="line">時段：${segs}</div>
+      ${note ? `<div class="line">備註：${note}</div>` : ``}
+    `;
+    detail.classList.add('show');
+  }
+  function closeDetail(){ detail.classList.remove('show'); }
+  detailClose.onclick = closeDetail;
+  detail.onclick = (e)=>{ if(e.target === detail) closeDetail(); };
+
+  function renderCalendar_(month, items){
+    const map = new Map();
+    for(const it of (items||[])){
+      if(it && it.date) map.set(it.date, it);
+    }
+
+    const [y,m] = month.split('-').map(Number);
+    const first = new Date(y, m-1, 1);
+    const firstWeekday = (first.getDay()+6)%7;
+    const totalCells = 42;
+    const startDate = new Date(y, m-1, 1-firstWeekday);
+
+    const frag = document.createDocumentFragment();
+    for(let i=0;i<totalCells;i++){
+      const cellDate = new Date(startDate);
+      cellDate.setDate(startDate.getDate()+i);
+      const inMonth = cellDate.getMonth() === (m-1);
+      const key = toDateKey_(cellDate);
+
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell' + (!inMonth ? ' is-out' : '') + (isToday_(cellDate) ? ' today' : '');
+      cell.dataset.date = key;
+      cell.innerHTML = `<div class="cal-day">${cellDate.getDate()}</div>`;
+      frag.appendChild(cell);
+    }
+    calGrid.innerHTML = '';
+    calGrid.appendChild(frag);
+
+    calGrid.onclick = (ev)=>{
+      const cell = ev.target.closest('.cal-cell');
+      if(!cell) return;
+      if(cell.classList.contains('is-out')) return;
+      const k = cell.dataset.date || '';
+      const it = map.get(k) || {type:'OFF',segments:[],note:''};
+      openDetail(k, it);
+    };
+  }
+
+  async function loadSchedule(month){
+    try{
+      const cached = scheduleCache_.get(month) || readSchedCache_(month);
+      if(cached){
+        setScheduleStatus('ok', `✅ 已載入 ${month} 班表（快取）`);
+        renderCalendar_(month, cached);
+      }else{
+        setScheduleStatus('', '載入班表中…');
+        calGrid.innerHTML = '';
+      }
+
+      const resp = await fetch('/api/schedule', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ userId: profile.userId, month })
+      });
+      const data = await resp.json().catch(()=>null);
+      if(!data || !data.ok){
+        if(!cached) setScheduleStatus('bad', (data && data.message) ? data.message : '班表讀取失敗');
+        return;
+      }
+      const items = data.items || [];
+      writeSchedCache_(month, items);
+      setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
+      renderCalendar_(month, items);
+      if(items.length===0) setScheduleStatus('warn','這個月沒有班表資料（或你尚未同步排班）');
+    }catch(e){
+      setScheduleStatus('bad','班表載入失敗');
+    }
+  }
+
+  let scheduleInited = false;
+  function showClock(){
+    tabClock.classList.add('active'); tabSchedule.classList.remove('active');
+    panelClock.classList.remove('hidden'); panelSchedule.classList.add('hidden');
+  }
+  function showSchedule(){
+    tabSchedule.classList.add('active'); tabClock.classList.remove('active');
+    panelSchedule.classList.remove('hidden'); panelClock.classList.add('hidden');
+    if(!scheduleInited){
+      scheduleInited = true;
+      loadSchedule(currentMonth);
+    }
+  }
+  tabClock.onclick = showClock;
+  tabSchedule.onclick = showSchedule;
+
+  btnPrev.onclick = ()=>{
+    const [y,m] = currentMonth.split('-').map(Number);
+    const d = new Date(y, m-2, 1);
+    currentMonth = ym_(d);
+    monthLabel.textContent = currentMonth;
+    loadSchedule(currentMonth);
+  };
+  btnNext.onclick = ()=>{
+    const [y,m] = currentMonth.split('-').map(Number);
+    const d = new Date(y, m, 1);
+    currentMonth = ym_(d);
+    monthLabel.textContent = currentMonth;
+    loadSchedule(currentMonth);
+  };
+
   async function postClock(action){
     try{
       if(!profile) throw new Error('尚未登入');
-
       const act = String(action||'').toUpperCase();
-      if(act !== 'IN' && act !== 'OUT') throw new Error('無效動作');
+      if(act!=='IN' && act!=='OUT') throw new Error('無效動作');
 
-      // 前端狀態先擋（減少重複）
-      if(act==='IN' && currentState==='IN'){
-        setStatus('warn','你目前已在上班中（請先打下班卡 OUT）');
-        return;
-      }
-      if(act==='OUT' && currentState!=='IN'){
-        setStatus('warn','你目前未上班/已下班（請先打上班卡 IN）');
-        return;
-      }
+      if(act==='IN' && currentState==='IN'){ setStatus('warn','你目前已在上班中（請先打下班卡 OUT）'); return; }
+      if(act==='OUT' && currentState!=='IN'){ setStatus('warn','你目前未上班/已下班（請先打上班卡 IN）'); return; }
 
       setStatus('', '送出打卡中…');
-      btnIn.disabled = true;
-      btnOut.disabled = true;
+      btnIn.disabled = true; btnOut.disabled = true;
 
-      // 按打卡時，強制用精準定位（避免 20~50m 誤差）
-      const posAcc = await getGpsAccurate();
-      if(posAcc) lastPos = posAcc;
-      
+      let distFast = null;
+      let accFast = null;
+      if(lastPos){
+        distFast = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, lastPos.coords.latitude, lastPos.coords.longitude);
+        accFast = Number(lastPos.coords.accuracy || 0);
+      }
+      const ACC_THRESHOLD = Math.max(30, FENCE_M);
+      const inFastRange = (distFast != null) ? (Math.round(distFast) <= FENCE_M) : false;
+
+      if(!(inFastRange && accFast > 0 && accFast <= ACC_THRESHOLD)){
+        pillGps.textContent = '定位校準中…';
+        const posAcc = await getGpsAccurate();
+        if(posAcc) lastPos = posAcc;
+      }
+
       if(!lastPos){
         setStatus('bad','定位未取得，請允許定位後再打卡。');
-        btnIn.disabled = false;
-        btnOut.disabled = false;
+        btnIn.disabled = false; btnOut.disabled = false;
         showCloseBtn();
         return;
       }
 
-      // 即時距離範圍檢查
-      const distM = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, lastPos.coords.latitude, lastPos.coords.longitude);
-      if(Math.round(distM) > FENCE_M){
-        setStatus('bad', `不在打卡範圍內（${formatDistText_(distM)}）`);
-        btnIn.disabled = false;
-        btnOut.disabled = false;
-        showCloseBtn();
-        return;
-      }
-
-      // 名字：優先用註冊名
-      let empName = (window.__empDisplayName && String(window.__empDisplayName).trim()) ? String(window.__empDisplayName).trim() : getEmpNameCached_();
-      if(!empName){
-        const n = await fetchEmpDisplayName_(250);
-        if(n){
-          empName = n;
-          window.__empDisplayName = n;
-          setEmpNameCached_(n);
-        }
-      }
-      if(!empName) empName = '員工';
-
-      // 按下當下時間
       const when = new Date();
       const hhmm = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}`;
       const dateStr = `${when.getFullYear()}-${String(when.getMonth()+1).padStart(2,'0')}-${String(when.getDate()).padStart(2,'0')}`;
       const timeStr = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}:${String(when.getSeconds()).padStart(2,'0')}`;
+
+      let empName = localStorage.getItem('empDisplayName') || '';
+      if(!empName){
+        const n = await fetchEmpDisplayName_(250);
+        if(n){
+          empName = n;
+          localStorage.setItem('empDisplayName', n);
+        }
+      }
+      if(!empName) empName = '員工';
 
       const payload = {
         action: act,
@@ -638,256 +670,58 @@
         note: ''
       };
 
-      // 嘗試後端（0.7 秒）
-      let serverData = null;
+      let serverFlex = null;
+      try{
+        const controller = new AbortController();
+        const timer = setTimeout(()=>controller.abort(), 700);
+        const resp = await fetch('/api/clock', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload), signal: controller.signal });
+        clearTimeout(timer);
+        const data = await resp.json().catch(()=>null);
+        if(data && data.ok && data.flex) serverFlex = data.flex;
+        else if(data && !data.ok){
+          setStatus('bad', data.message || '打卡失敗');
+          btnIn.disabled = false; btnOut.disabled = false;
+          showCloseBtn();
+          return;
+        }
+      }catch(e){}
 
-  function pad2_(n){ return String(n).padStart(2,'0'); }
-  function ymToDate_(ym){ // 'YYYY-MM'
-    const [y,m] = ym.split('-').map(Number);
-    return new Date(y, m-1, 1);
-  }
-  function dateKey_(d){
-    return `${d.getFullYear()}-${pad2_(d.getMonth()+1)}-${pad2_(d.getDate())}`;
-  }
-  function isToday_(d){
-    const now = new Date();
-    return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth() && d.getDate()===now.getDate();
-  }
-  function firstDowMonday_(d){ // Monday=0..Sunday=6
-    const js = d.getDay(); // Sun=0..Sat=6
-    return (js + 6) % 7;
-  }
-  function renderCalendar_(month, items){
-    const wrap = document.getElementById('calendarWrap');
-    const grid = document.getElementById('scheduleList');
-    const detail = document.getElementById('calDetail');
-    const detailTitle = document.getElementById('calDetailTitle');
-    const detailBody = document.getElementById('calDetailBody');
-    const detailClose = document.getElementById('calDetailClose');
-
-    // map by date
-    const map = new Map();
-    for(const it of items){
-      if(it && it.date) map.set(it.date, it);
-    }
-
-    const first = ymToDate_(month);
-    const y = first.getFullYear();
-    const m = first.getMonth();
-    const daysInMonth = new Date(y, m+1, 0).getDate();
-
-    // previous month info
-    const prevDays = new Date(y, m, 0).getDate();
-    const startOffset = firstDowMonday_(first); // 0..6
-    const totalCells = 42; // 6 weeks
-
-    grid.innerHTML = '';
-
-    function openDetail(dateKey, it){
-      detailTitle.textContent = dateKey;
-      const segs = (it && it.segments && it.segments.length)
-        ? it.segments.map(s=>`${s.start}-${s.end}`).join('\n')
-        : '—';
-      const type = it ? it.type : (isOut ? '' : 'OFF');
-
-      const cell = document.createElement('div');
-      cell.className = 'cal-cell' + (isOut ? ' is-out' : '') + (isToday_(cellDate) ? ' today' : '');
-      cell.dataset.date = key;
-
-      // ✅ 每格只顯示日期（依你需求）
-      cell.innerHTML = `<div class="cal-day">${cellDate.getDate()}</div>`;
-
-      frag.appendChild(cell);
-    }
-
-    grid.innerHTML = '';
-    grid.appendChild(frag);
-
-    // ✅ 單一事件委派（比每格掛 onclick 更快）
-    grid.onclick = (ev)=>{
-      const cell = ev.target.closest('.cal-cell');
-      if(!cell) return;
-      const k = cell.dataset.date || '';
-      // out-of-month cell 不開明細
-      if(cell.classList.contains('is-out')) return;
-      const it = map.get(k) || {type:'OFF',segments:[],note:''};
-      openDetail(k, it);
-    };
-ote:''});
-      }
-      grid.appendChild(cell);
-    }
-  }
-
-
-  // ===== Schedule cache（加速月曆載入）=====
-  const scheduleCache_ = new Map(); // month -> items
-  function schedKey_(month){ return `sched:${profile ? profile.userId : ''}:${month}`; }
-
-  function readSchedCache_(month){
-    try{
-      const k = schedKey_(month);
-      const raw = localStorage.getItem(k);
-      if(!raw) return null;
-      const obj = JSON.parse(raw);
-      // 30 分鐘內視為有效快取
-      if(obj && obj.ts && (Date.now() - obj.ts) < 30*60*1000 && Array.isArray(obj.items)) return obj.items;
-    }catch(e){}
-    return null;
-  }
-
-  function writeSchedCache_(month, items){
-    try{
-      scheduleCache_.set(month, items);
-      localStorage.setItem(schedKey_(month), JSON.stringify({ts: Date.now(), items}));
-    }catch(e){}
-  }
-async function loadSchedule(month){
-    try{
-      // 1) 先用快取（秒出）
-      const cached = scheduleCache_.get(month) || readSchedCache_(month);
-      if(cached){
-        setScheduleStatus('ok', `✅ 已載入 ${month} 班表（快取）`);
-        renderCalendar_(month, cached);
-      }else{
-        setScheduleStatus('', '載入班表中…');
-        // 清空格子避免殘影
-        document.getElementById('scheduleList').innerHTML = '';
+      if(!serverFlex){
+        queueClockWrite_(payload);
       }
 
-      // 2) 背景更新（不阻塞 UI）
-      const resp = await fetch('/api/schedule', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ userId: profile.userId, month })
-      });
-      const data = await resp.json();
-      if(!data.ok){
-        if(!cached) setScheduleStatus('bad', data.message || '班表讀取失敗');
-        return;
-      }
-      const items = data.items || [];
-      writeSchedCache_(month, items);
-      setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
-      renderCalendar_(month, items);
-      if(items.length===0) setScheduleStatus('warn', '這個月沒有班表資料（或你尚未同步排班）');
-    }catch(err){
-      setScheduleStatus('bad', '班表載入失敗');
-    }
-  }
-      const items = data.items || [];
-      setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
-      renderCalendar_(month, items);
-      if(items.length===0) setScheduleStatus('warn', '這個月沒有班表資料（或你尚未同步排班）');
-    }catch(err){
-      setScheduleStatus('bad', '班表載入失敗：' + (err && err.message ? err.message : err));
-    }
-  }e_(toSend);
+      const distM = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, payload.lat, payload.lng);
+      const toSend = serverFlex ? serverFlex : buildLocalFlex_(act, empName, hhmm, dateStr, timeStr, distM);
+      const msg = normalizeFlexMessage_(toSend);
 
       try{
         await liff.sendMessages([msg]);
       }catch(e){
-        setStatus('warn', 'Flex 發送失敗：' + fmtErr_(e));
-        await refreshState();
-        btnIn.disabled = false;
-        btnOut.disabled = false;
+        setStatus('warn', 'Flex 發送失敗');
+        btnIn.disabled = false; btnOut.disabled = false;
         showCloseBtn();
         return;
       }
 
-      try{
-        liff.closeWindow();
-        return;
-      }catch(e){
-        setStatus('ok', 'Flex 已送出 ✅（若未自動關閉，請按「關閉視窗」）');
-        await refreshState();
-        btnIn.disabled = false;
-        btnOut.disabled = false;
-        showCloseBtn();
-      }
-    }catch(err){
-      setStatus('bad', '送出失敗：' + (err && err.message ? err.message : err));
-      btnIn.disabled = false;
-      btnOut.disabled = false;
+      try{ liff.closeWindow(); return; }catch(e){}
+      setStatus('ok','Flex 已送出 ✅（若未自動關閉，請按「關閉視窗」）');
+      btnIn.disabled = false; btnOut.disabled = false;
+      showCloseBtn();
+    }catch(e){
+      setStatus('bad','送出失敗');
+      btnIn.disabled = false; btnOut.disabled = false;
       showCloseBtn();
     }
   }
 
-  btnIn.addEventListener('click', ()=>postClock('IN'));
-  btnOut.addEventListener('click', ()=>postClock('OUT'));
+  btnIn.onclick = ()=>postClock('IN');
+  btnOut.onclick = ()=>postClock('OUT');
 
-  btnCopyId.addEventListener('click', async ()=>{
-    try{
-      await navigator.clipboard.writeText(profile.userId);
-      setStatus('ok','✅ 已複製 LINE ID，請貼到 Sheets employees');
-    }catch(e){}
-  });
-
-  // ===== schedule（保留原功能）=====
-  let currentMonth = (() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-  })();
-
-  function changeMonth(delta){
-    const [y,m] = currentMonth.split('-').map(Number);
-    const d = new Date(y, m-1 + delta, 1);
-    currentMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    monthLabel.textContent = currentMonth;
-    if(profile && profile.userId) loadSchedule(currentMonth);
-  }
-  btnPrev.addEventListener('click', ()=> changeMonth(-1));
-  btnNext.addEventListener('click', ()=> changeMonth(1));
-
-  function fmtSegs(segs){
-    if(!segs || !segs.length) return '—';
-    return segs.map(s=>`${s.start}-${s.end}`).join(' / ');
-  }
-  async function loadSchedule(month){
-    try{
-      setScheduleStatus('', '載入班表中…');
-      scheduleList.innerHTML = '';
-      const resp = await fetch('/api/schedule', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ userId: profile.userId, month })
-      });
-      const data = await resp.json();
-      if(!data.ok){
-        setScheduleStatus('bad', data.message || '班表讀取失敗');
-        return;
-      }
-      setScheduleStatus('ok', `✅ 已載入 ${month} 班表`);
-      const items = data.items || [];
-      for(const it of items){
-        const badgeCls = (it.type === 'WORK') ? 'badge work' : 'badge off';
-        const badgeTxt = (it.type === 'WORK') ? '上班' : (it.type === 'LEAVE' ? '請假' : '休');
-        const segTxt = fmtSegs(it.segments);
-        const div = document.createElement('div');
-        div.className='item';
-        div.innerHTML = `
-          <div>
-            <div class="d">${it.date}</div>
-            <div class="seg">${segTxt}</div>
-            ${it.note ? `<div class="note">${it.note}</div>` : ``}
-          </div>
-          <div class="${badgeCls}">${badgeTxt}</div>
-        `;
-        scheduleList.appendChild(div);
-      }
-      if(items.length===0) setScheduleStatus('warn', '這個月沒有班表資料（或你尚未同步排班）');
-    }catch(err){
-      setScheduleStatus('bad', '班表載入失敗：' + (err && err.message ? err.message : err));
-    }
-  }
-
-  // ===== init =====
   async function init(){
     try{
       await liff.init({ liffId: LIFF_ID });
-
       try{
-        clientText.textContent = (liff.isInClient && liff.isInClient()) ? 'LINE內（可關閉）' : '非LINE內（不可自動關閉）';
+        clientText.textContent = (liff.isInClient && liff.isInClient()) ? 'LINE內（可關閉）' : '非LINE內';
       }catch(e){ clientText.textContent='未知'; }
 
       if(!liff.isLoggedIn()){
@@ -897,70 +731,43 @@ async function loadSchedule(month){
           showCloseBtn();
           return;
         }
-        setStatus('warn','請先登入 LINE 才能打卡。');
         liff.login(); return;
       }
 
       profile = await liff.getProfile();
       pillLogin.textContent='已登入';
       uidText.textContent = profile.userId || '--';
+      helloEl.textContent = '嗨，請先取得定位後再打卡。';
 
-      // 優先用註冊名，不顯示 LINE 暱稱
-      window.__empDisplayName = getEmpNameCached_();
-      // 背景更新一次（不阻塞）
+      btnCopyId.style.display = profile.userId ? 'block' : 'none';
+      btnCopyId.onclick = async ()=>{
+        try{
+          await navigator.clipboard.writeText(profile.userId);
+          setStatus('ok','✅ 已複製 LINE ID');
+        }catch(e){}
+      };
+
       fetchEmpDisplayName_(250).then(n=>{
-        if(n){
-          window.__empDisplayName = n;
-          setEmpNameCached_(n);
-          // 更新 hello 文案
-          helloEl.textContent = `嗨 ${n}，請先取得定位後再打卡。`;
-        }
+        if(n) localStorage.setItem('empDisplayName', n);
       });
 
-      helloEl.textContent = `嗨 ${(window.__empDisplayName || '員工')}，請先取得定位後再打卡。`;
-
-      monthLabel.textContent = currentMonth;
-
-      // ✅ 先開啟快速定位（不要等後端）
-      getGpsFast();
-
-      // ✅ 同步狀態（也會順便更新 display_name），不要卡住太久
       setStateUI('UNKNOWN');
       setStatus('', '讀取狀態中…');
-      Promise.race([
-        refreshState(),
-        new Promise(res=>setTimeout(res, 450))
-      ]).then(()=>{
-        setStatus('ok', '狀態已更新，可以打卡。');
+      refreshState().then(()=>setStatus('ok','狀態已更新，可以打卡。'));
+
+      pillGps.textContent='定位取得中…';
+      getGpsFast().then(pos=>{
+        if(!pos) pillGps.textContent='定位未取得';
       });
 
-      // Copy button
-      btnCopyId.style.display = (profile.userId ? 'block' : 'none');
-
-    }catch(err){
-      setStatus('bad','初始化失敗：' + fmtErr_(err));
+      showClock();
+    }catch(e){
+      setStatus('bad','初始化失敗');
       showCloseBtn();
     }
   }
 
   init();
-</script>
-
-<script>
-  // iOS Safari: prevent pinch zoom / gesture zoom
-  document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
-  document.addEventListener('gesturechange', function (e) { e.preventDefault(); }, { passive: false });
-  document.addEventListener('gestureend', function (e) { e.preventDefault(); }, { passive: false });
-
-  // prevent double-tap to zoom (best-effort)
-  let lastTouchEnd = 0;
-  document.addEventListener('touchend', function (e) {
-    const now = Date.now();
-    if (now - lastTouchEnd <= 300) {
-      e.preventDefault();
-    }
-    lastTouchEnd = now;
-  }, { passive: false });
 </script>
 </body>
 </html>
