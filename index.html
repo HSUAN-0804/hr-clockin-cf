@@ -824,6 +824,10 @@ async function refreshState(){
 
       // ✅ 狀態背景更新（不阻塞 UI）
       refreshState();
+      // ✅ 背景預載本月班表（讓切到班表幾乎秒開）
+setTimeout(()=>{ 
+  try{ loadSchedule(currentMonth); }catch(e){} 
+}, 200);
 pillGps.textContent='定位取得中…';
       getGpsFast().then(pos=>{
         if(!pos) pillGps.textContent='定位未取得';
