@@ -98,6 +98,25 @@
     .cal-cell.is-out{opacity:.35}
     .cal-cell.today{border-color:rgba(255,255,255,.35)}
     .cal-day{font-weight:900;font-size:14px;color:#fff}
+    /* ===== Calendar shift indicator ===== */
+.cal-cell.work{
+  border-color: rgba(34,197,94,.35);
+  background: rgba(34,197,94,.10);
+}
+.cal-cell.off{
+  opacity: .45;
+}
+.cal-tag{
+  margin-top: 4px;
+  font-size: 11px;
+  color: rgba(255,255,255,.75);
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-tag.work{ color: rgba(220,252,231,.95); }
+.cal-tag.off{ color: rgba(255,255,255,.55); }
 
     /* Detail bottom sheet (small) */
     .cal-detail{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;padding:12px;}
@@ -555,10 +574,35 @@ async function refreshState(){
       const key = toDateKey_(cellDate);
 
       const cell = document.createElement('div');
-      cell.className = 'cal-cell' + (!inMonth ? ' is-out' : '') + (isToday_(cellDate) ? ' today' : '');
-      cell.dataset.date = key;
-      cell.innerHTML = `<div class="cal-day">${cellDate.getDate()}</div>`;
-      frag.appendChild(cell);
+const item = map.get(key); // 取得該日班表（沒有就 undefined）
+
+let cls = 'cal-cell' + (!inMonth ? ' is-out' : '') + (isToday_(cellDate) ? ' today' : '');
+let tagHtml = '';
+
+if(item){
+  const type = String(item.type || '').toUpperCase();
+  const segs = Array.isArray(item.segments) ? item.segments : [];
+
+  if(type === 'WORK' && segs.length){
+    cls += ' work';
+    // 單段：10:30-21:00；多段：10:30-14:00/18:00-21:00（太長會自動省略）
+    const t = segs.map(s=>`${s.start}-${s.end}`).join('/');
+    tagHtml = `<div class="cal-tag work">${t}</div>`;
+  }else{
+    // OFF / LEAVE / 其他：顯示休
+    cls += ' off';
+    tagHtml = `<div class="cal-tag off">休</div>`;
+  }
+}else{
+  // 沒資料也先當休（你也可以改成空白）
+  cls += ' off';
+  tagHtml = `<div class="cal-tag off">休</div>`;
+}
+
+cell.className = cls;
+cell.dataset.date = key;
+cell.innerHTML = `<div class="cal-day">${cellDate.getDate()}</div>${tagHtml}`;
+frag.appendChild(cell);
     }
     calGrid.innerHTML = '';
     calGrid.appendChild(frag);
