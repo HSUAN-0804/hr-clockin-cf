@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="zh-Hant">
 <head>
@@ -91,6 +90,7 @@
       min-height:44px;
       padding:6px;
       display:flex;
+      flex-direction: column; /* ✅ 重要：日期 + 時段 垂直排列 */
       align-items:flex-start;
       justify-content:flex-start;
       cursor:pointer;
@@ -98,25 +98,26 @@
     .cal-cell.is-out{opacity:.35}
     .cal-cell.today{border-color:rgba(255,255,255,.35)}
     .cal-day{font-weight:900;font-size:14px;color:#fff}
-    /* ===== Calendar shift indicator ===== */
-.cal-cell.work{
-  border-color: rgba(34,197,94,.35);
-  background: rgba(34,197,94,.10);
-}
-.cal-cell.off{
-  opacity: .45;
-}
-.cal-tag{
-  margin-top: 4px;
-  font-size: 11px;
-  color: rgba(255,255,255,.75);
-  line-height: 1.1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.cal-tag.work{ color: rgba(220,252,231,.95); }
-.cal-tag.off{ color: rgba(255,255,255,.55); }
+
+    /* ✅ 上班/休假 indicator：只有上班日會顯示時段（休假留空） */
+    .cal-cell.work{
+      border-color: rgba(34,197,94,.35);
+      background: rgba(34,197,94,.10);
+    }
+    .cal-cell.off{
+      opacity: .55;
+    }
+    .cal-tag{
+      margin-top: 4px;
+      font-size: 11px;
+      color: rgba(255,255,255,.75);
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+    }
+    .cal-tag.work{ color: rgba(220,252,231,.95); }
 
     /* Detail bottom sheet (small) */
     .cal-detail{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;padding:12px;}
@@ -377,7 +378,6 @@
     return pos;
   }
 
-  
   // ===== State cache (加速「狀態」顯示) =====
   function stateKey_(){ return `clock_state:${profile ? profile.userId : ''}`; }
 
@@ -386,7 +386,6 @@
       const raw = localStorage.getItem(stateKey_());
       if(!raw) return null;
       const obj = JSON.parse(raw);
-      // 10 分鐘內有效
       if(obj && obj.ts && (Date.now() - obj.ts) < 10*60*1000 && obj.state) return String(obj.state).toUpperCase();
     }catch(e){}
     return null;
@@ -397,7 +396,8 @@
       localStorage.setItem(stateKey_(), JSON.stringify({ ts: Date.now(), state: String(state||'').toUpperCase() }));
     }catch(e){}
   }
-async function refreshState(){
+
+  async function refreshState(){
     if(!profile || !profile.userId) return;
     try{
       const resp = await fetch('/api/clock', {
@@ -507,7 +507,7 @@ async function refreshState(){
     };
   }
 
-  // ===== Schedule cache/render (split init) =====
+  // ===== Schedule cache/render =====
   const scheduleCache_ = new Map();
   function schedKey_(month){ return `sched:${profile ? profile.userId : ''}:${month}`; }
   function readSchedCache_(month){
@@ -574,35 +574,33 @@ async function refreshState(){
       const key = toDateKey_(cellDate);
 
       const cell = document.createElement('div');
-const item = map.get(key); // 取得該日班表（沒有就 undefined）
+      const item = map.get(key);
 
-let cls = 'cal-cell' + (!inMonth ? ' is-out' : '') + (isToday_(cellDate) ? ' today' : '');
-let tagHtml = '';
+      let cls = 'cal-cell' + (!inMonth ? ' is-out' : '') + (isToday_(cellDate) ? ' today' : '');
+      let tagHtml = '';
 
-if(item){
-  const type = String(item.type || '').toUpperCase();
-  const segs = Array.isArray(item.segments) ? item.segments : [];
+      // ✅ 只顯示上班日（WORK+segments）的時段；OFF/沒資料就留空
+      if(item){
+        const type = String(item.type || '').toUpperCase();
+        const segs = Array.isArray(item.segments) ? item.segments : [];
 
-  if(type === 'WORK' && segs.length){
-    cls += ' work';
-    // 單段：10:30-21:00；多段：10:30-14:00/18:00-21:00（太長會自動省略）
-    const t = segs.map(s=>`${s.start}-${s.end}`).join('/');
-    tagHtml = `<div class="cal-tag work">${t}</div>`;
-  }else{
-    // OFF / LEAVE / 其他：顯示休
-    cls += ' off';
-    tagHtml = `<div class="cal-tag off">休</div>`;
-  }
-}else{
-  // 沒資料也先當休（你也可以改成空白）
-  cls += ' off';
-  tagHtml = `<div class="cal-tag off">休</div>`;
-}
+        if(type === 'WORK' && segs.length){
+          cls += ' work';
+          const t = segs.map(s=>`${s.start}-${s.end}`).join('/');
+          tagHtml = `<div class="cal-tag work">${t}</div>`;
+        }else{
+          cls += ' off';
+          tagHtml = ''; // 休假留空
+        }
+      }else{
+        cls += ' off';
+        tagHtml = ''; // 沒資料也留空（視覺更乾淨）
+      }
 
-cell.className = cls;
-cell.dataset.date = key;
-cell.innerHTML = `<div class="cal-day">${cellDate.getDate()}</div>${tagHtml}`;
-frag.appendChild(cell);
+      cell.className = cls;
+      cell.dataset.date = key;
+      cell.innerHTML = `<div class="cal-day">${cellDate.getDate()}</div>${tagHtml}`;
+      frag.appendChild(cell);
     }
     calGrid.innerHTML = '';
     calGrid.appendChild(frag);
@@ -700,7 +698,6 @@ frag.appendChild(cell);
       const act = String(action||'').toUpperCase();
       if(act !== 'IN' && act !== 'OUT') throw new Error('無效動作');
 
-      // 前端先擋（避免明顯重複）
       if(act==='IN' && currentState==='IN'){ setStatus('warn','你目前已在上班中（請先打下班卡 OUT）'); return; }
       if(act==='OUT' && currentState!=='IN'){ setStatus('warn','你目前未上班/已下班（請先打上班卡 IN）'); return; }
 
@@ -708,7 +705,6 @@ frag.appendChild(cell);
       btnIn.disabled = true;
       btnOut.disabled = true;
 
-      // GPS（兩段式：快定位已在範圍內且精度夠就不再抓精準）
       let distFast = null;
       let accFast = null;
       if(lastPos){
@@ -729,13 +725,11 @@ frag.appendChild(cell);
         return;
       }
 
-      // 本地時間
       const when = new Date();
       const hhmm = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}`;
       const dateStr = `${when.getFullYear()}-${String(when.getMonth()+1).padStart(2,'0')}-${String(when.getDate()).padStart(2,'0')}`;
       const timeStr = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}:${String(when.getSeconds()).padStart(2,'0')}`;
 
-      // display_name 快取（不顯示 LINE 暱稱）
       let empName = localStorage.getItem('empDisplayName') || '';
       if(!empName){
         const n = await fetchEmpDisplayName_(250);
@@ -756,7 +750,6 @@ frag.appendChild(cell);
         note: ''
       };
 
-      // 0.7s 取正式 flex（成功也包含後端防重複）
       let serverFlex = null;
       try{
         const controller = new AbortController();
@@ -782,7 +775,7 @@ frag.appendChild(cell);
       }
 
       if(!serverFlex){
-        queueClockWrite_(payload); // 背景寫入
+        queueClockWrite_(payload);
       }
 
       const distM = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, payload.lat, payload.lng);
@@ -791,7 +784,6 @@ frag.appendChild(cell);
 
       await liff.sendMessages([msg]);
 
-      // ✅ 送出後立即鎖定狀態（避免重複 IN/OUT）
       if(act==='IN'){
         currentState = 'IN';
         setStateUI('IN');
@@ -818,7 +810,6 @@ frag.appendChild(cell);
       btnOut.disabled = false;
     }
   }
-
 
   btnIn.onclick = ()=>postClock('IN');
   btnOut.onclick = ()=>postClock('OUT');
@@ -857,22 +848,20 @@ frag.appendChild(cell);
         if(n) localStorage.setItem('empDisplayName', n);
       });
 
-      // ✅ 先用快取狀態（秒出），沒有就用安全預設 OFF
       const cachedState = readStateCache_();
       if(cachedState){
         setStateUI(cachedState);
       }else{
-        setStateUI('OFF'); // 預設：未上班/已下班（IN 可按、OUT 先灰）
+        setStateUI('OFF');
       }
       setStatus('ok','已準備好，可以打卡。');
 
-      // ✅ 狀態背景更新（不阻塞 UI）
       refreshState();
+
       // ✅ 背景預載本月班表（讓切到班表幾乎秒開）
-setTimeout(()=>{ 
-  try{ loadSchedule(currentMonth); }catch(e){} 
-}, 200);
-pillGps.textContent='定位取得中…';
+      setTimeout(()=>{ try{ loadSchedule(currentMonth); }catch(e){} }, 200);
+
+      pillGps.textContent='定位取得中…';
       getGpsFast().then(pos=>{
         if(!pos) pillGps.textContent='定位未取得';
       });
