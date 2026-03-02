@@ -586,8 +586,8 @@
 
         if(type === 'WORK' && segs.length){
           cls += ' work';
-          const t = segs.map(s=>`${s.start}-${s.end}`).join('/');
-          tagHtml = `<div class="cal-tag work">${t}</div>`;
+         const t = segs.map(s=>`${s.start}-${s.end}`).join('/');
+        tagHtml = `<div class="cal-tag work">●</div>`;
         }else{
           cls += ' off';
           tagHtml = ''; // 休假留空
