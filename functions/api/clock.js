@@ -23,6 +23,13 @@ export async function onRequestPost({ request, env }) {
       const lat = toNum(body.lat, null);
       const lng = toNum(body.lng, null);
       const accuracy = toNum(body.accuracy, null);
+      // ✅ 白名單：這些 LINE ID 免距離限制（只繞過 OUT_OF_RANGE，其他規則不動）
+const BYPASS = new Set([
+  "U04731e6b1fcc42dc33e3141c55ad6ef5"
+]);
+
+const uid = String(body.userId || body.line_user_id || "").trim();
+const bypassFence = BYPASS.has(uid);
 
       if (lat === null || lng === null) {
         return json({ ok:false, code:"NO_GPS", message:"定位未取得，請允許定位後再打卡。" }, 400);
@@ -38,15 +45,23 @@ export async function onRequestPost({ request, env }) {
       }
 
       const distM = haversineMeters(SHOP_LAT, SHOP_LNG, lat, lng);
-      if (distM > FENCE_M) {
-        return json({
-          ok:false,
-          code:"OUT_OF_RANGE",
-          message:`超出打卡範圍：${Math.round(distM)}m / ${FENCE_M}m（請靠近店面再打卡）`,
-          dist_m: Math.round(distM),
-          fence_m: FENCE_M
-        }, 403);
-      }
+
+// ✅ 非白名單才擋距離
+if (!bypassFence && distM > FENCE_M) {
+  return json({
+    ok:false,
+    code:"OUT_OF_RANGE",
+    message:`超出打卡範圍：${Math.round(distM)}m / ${FENCE_M}m（請靠近店面再打卡）`,
+    dist_m: Math.round(distM),
+    fence_m: FENCE_M
+  }, 403);
+}
+
+// ✅ 白名單仍把距離帶去 GAS 方便你記錄（可選）
+body._dist_m = Math.round(distM);
+body._fence_m = FENCE_M;
+body._acc_max = ACC_MAX;
+body._bypass_fence = bypassFence ? 1 : 0;
 
       // 可選：附回 GAS 便於記錄（不影響原本邏輯）
       body._dist_m = Math.round(distM);
