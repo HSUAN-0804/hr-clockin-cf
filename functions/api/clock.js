@@ -85,7 +85,11 @@ export async function onRequestPost({ request, env }) {
     try { out = JSON.parse(text); }
     catch { out = { ok:false, code:"BAD_GAS_RESPONSE", message:"GAS 回應非 JSON", raw_head: text.slice(0,500) }; }
 
-    return json(out, 200);
+    return json({
+  ...out,
+  _gas_http_status: res.status,
+  _gas_raw_head: text.slice(0, 300),
+}, 200);
   } catch (e) {
     return json({ ok:false, code:"CF_ERROR", message:"系統忙碌，請稍後再試", detail:String(e) }, 500);
   }
