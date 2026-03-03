@@ -1,18 +1,3 @@
- // ✅ 白名單：這些 LINE ID 免距離限制（只繞過 OUT_OF_RANGE，其他規則不動）
-const BYPASS = new Set([
-  "U04731e6b1fcc42dc33e3141c55ad6ef5"
-]);
-export async function onRequestOptions() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Cache-Control": "no-store",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-    },
-  });
-}
 export async function onRequestPost({ request, env }) {
   try {
     const GAS_WEBAPP_URL = (env.GAS_WEBAPP_URL || "").trim();
@@ -29,49 +14,45 @@ export async function onRequestPost({ request, env }) {
     const SHOP_LNG = toNum(env.SHOP_LNG, 121.2242778);
 
     // ✅ 你的需求：距離嚴格化到 100m（也可用 env 覆蓋）
-    const FENCE_M  = toNum(env.FENCE_M, 100);
+    const FENCE_M  = toNum(env.FENCE_M, 500);
 
     // ✅ 你的需求：accuracy 上限固定 120m（更嚴格）
     const ACC_MAX = 120;
 
     if (needFence) {
-  const lat = toNum(body.lat, null);
-  const lng = toNum(body.lng, null);
-  const accuracy = toNum(body.accuracy, null);
+      const lat = toNum(body.lat, null);
+      const lng = toNum(body.lng, null);
+      const accuracy = toNum(body.accuracy, null);
 
-  const uid = String(body.userId || body.line_user_id || "").trim();
-  const bypassFence = BYPASS.has(uid);
+      if (lat === null || lng === null) {
+        return json({ ok:false, code:"NO_GPS", message:"定位未取得，請允許定位後再打卡。" }, 400);
+      }
 
-  if (lat === null || lng === null) {
-    return json({ ok:false, code:"NO_GPS", message:"定位未取得，請允許定位後再打卡。" }, 400);
-  }
+      // accuracy 太飄：直接擋（避免人在遠處、但漂到店裡）
+      if (accuracy !== null && accuracy > 0 && accuracy > ACC_MAX) {
+        return json({
+          ok:false,
+          code:"GPS_NOT_ACCURATE",
+          message:`GPS 精準度不足（${Math.round(accuracy)}m > ${ACC_MAX}m），請走到戶外/窗邊再試一次。`
+        }, 400);
+      }
 
-  if (accuracy !== null && accuracy > 0 && accuracy > ACC_MAX) {
-    return json({
-      ok:false,
-      code:"GPS_NOT_ACCURATE",
-      message:`GPS 精準度不足（${Math.round(accuracy)}m > ${ACC_MAX}m），請走到戶外/窗邊再試一次。`
-    }, 400);
-  }
+      const distM = haversineMeters(SHOP_LAT, SHOP_LNG, lat, lng);
+      if (distM > FENCE_M) {
+        return json({
+          ok:false,
+          code:"OUT_OF_RANGE",
+          message:`超出打卡範圍：${Math.round(distM)}m / ${FENCE_M}m（請靠近店面再打卡）`,
+          dist_m: Math.round(distM),
+          fence_m: FENCE_M
+        }, 403);
+      }
 
-  const distM = haversineMeters(SHOP_LAT, SHOP_LNG, lat, lng);
-
-  if (!bypassFence && distM > FENCE_M) {
-    return json({
-      ok:false,
-      code:"OUT_OF_RANGE",
-      message:`超出打卡範圍：${Math.round(distM)}m / ${FENCE_M}m（請靠近店面再打卡）`,
-      dist_m: Math.round(distM),
-      fence_m: FENCE_M
-    }, 403);
-  }
-
-  // 送去 GAS 記錄用
-  body._dist_m = Math.round(distM);
-  body._fence_m = FENCE_M;
-  body._acc_max = ACC_MAX;
-  body._bypass_fence = bypassFence ? 1 : 0;
-}
+      // 可選：附回 GAS 便於記錄（不影響原本邏輯）
+      body._dist_m = Math.round(distM);
+      body._fence_m = FENCE_M;
+      body._acc_max = ACC_MAX;
+    }
 
     // 通過圍籬才轉送 GAS
     const res = await fetch(GAS_WEBAPP_URL, {
@@ -85,28 +66,32 @@ export async function onRequestPost({ request, env }) {
     try { out = JSON.parse(text); }
     catch { out = { ok:false, code:"BAD_GAS_RESPONSE", message:"GAS 回應非 JSON", raw_head: text.slice(0,500) }; }
 
-    return json({
-  ...out,
-  _gas_http_status: res.status,
-  _gas_raw_head: text.slice(0, 300),
-}, 200);
+    return json(out, 200);
   } catch (e) {
     return json({ ok:false, code:"CF_ERROR", message:"系統忙碌，請稍後再試", detail:String(e) }, 500);
   }
 }
 
+export async function onRequestOptions() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+    }
+  });
+}
 
-
-function json(obj, status = 200) {
+function json(obj, status=200){
   return new Response(JSON.stringify(obj), {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store",
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "Content-Type",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
-    },
+    }
   });
 }
 
