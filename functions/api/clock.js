@@ -14,7 +14,7 @@ export async function onRequestPost({ request, env }) {
     const SHOP_LNG = toNum(env.SHOP_LNG, 121.2242778);
 
     // ✅ 你的需求：距離嚴格化到 100m（也可用 env 覆蓋）
-    const FENCE_M  = toNum(env.FENCE_M, 500);
+    const FENCE_M  = toNum(env.FENCE_M, 50);
 
     // ✅ 你的需求：accuracy 上限固定 120m（更嚴格）
     const ACC_MAX = 120;
