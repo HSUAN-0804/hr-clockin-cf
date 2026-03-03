@@ -1,3 +1,8 @@
+ // ✅ 白名單：這些 LINE ID 免距離限制（只繞過 OUT_OF_RANGE，其他規則不動）
+const BYPASS = new Set([
+  "U04731e6b1fcc42dc33e3141c55ad6ef5"
+]);
+
 export async function onRequestPost({ request, env }) {
   try {
     const GAS_WEBAPP_URL = (env.GAS_WEBAPP_URL || "").trim();
@@ -20,54 +25,43 @@ export async function onRequestPost({ request, env }) {
     const ACC_MAX = 120;
 
     if (needFence) {
-      const lat = toNum(body.lat, null);
-      const lng = toNum(body.lng, null);
-      const accuracy = toNum(body.accuracy, null);
-      // ✅ 白名單：這些 LINE ID 免距離限制（只繞過 OUT_OF_RANGE，其他規則不動）
-const BYPASS = new Set([
-  "U04731e6b1fcc42dc33e3141c55ad6ef5"
-]);
+  const lat = toNum(body.lat, null);
+  const lng = toNum(body.lng, null);
+  const accuracy = toNum(body.accuracy, null);
 
-const uid = String(body.userId || body.line_user_id || "").trim();
-const bypassFence = BYPASS.has(uid);
+  const uid = String(body.userId || body.line_user_id || "").trim();
+  const bypassFence = BYPASS.has(uid);
 
-      if (lat === null || lng === null) {
-        return json({ ok:false, code:"NO_GPS", message:"定位未取得，請允許定位後再打卡。" }, 400);
-      }
+  if (lat === null || lng === null) {
+    return json({ ok:false, code:"NO_GPS", message:"定位未取得，請允許定位後再打卡。" }, 400);
+  }
 
-      // accuracy 太飄：直接擋（避免人在遠處、但漂到店裡）
-      if (accuracy !== null && accuracy > 0 && accuracy > ACC_MAX) {
-        return json({
-          ok:false,
-          code:"GPS_NOT_ACCURATE",
-          message:`GPS 精準度不足（${Math.round(accuracy)}m > ${ACC_MAX}m），請走到戶外/窗邊再試一次。`
-        }, 400);
-      }
+  if (accuracy !== null && accuracy > 0 && accuracy > ACC_MAX) {
+    return json({
+      ok:false,
+      code:"GPS_NOT_ACCURATE",
+      message:`GPS 精準度不足（${Math.round(accuracy)}m > ${ACC_MAX}m），請走到戶外/窗邊再試一次。`
+    }, 400);
+  }
 
-      const distM = haversineMeters(SHOP_LAT, SHOP_LNG, lat, lng);
+  const distM = haversineMeters(SHOP_LAT, SHOP_LNG, lat, lng);
 
-// ✅ 非白名單才擋距離
-if (!bypassFence && distM > FENCE_M) {
-  return json({
-    ok:false,
-    code:"OUT_OF_RANGE",
-    message:`超出打卡範圍：${Math.round(distM)}m / ${FENCE_M}m（請靠近店面再打卡）`,
-    dist_m: Math.round(distM),
-    fence_m: FENCE_M
-  }, 403);
+  if (!bypassFence && distM > FENCE_M) {
+    return json({
+      ok:false,
+      code:"OUT_OF_RANGE",
+      message:`超出打卡範圍：${Math.round(distM)}m / ${FENCE_M}m（請靠近店面再打卡）`,
+      dist_m: Math.round(distM),
+      fence_m: FENCE_M
+    }, 403);
+  }
+
+  // 送去 GAS 記錄用
+  body._dist_m = Math.round(distM);
+  body._fence_m = FENCE_M;
+  body._acc_max = ACC_MAX;
+  body._bypass_fence = bypassFence ? 1 : 0;
 }
-
-// ✅ 白名單仍把距離帶去 GAS 方便你記錄（可選）
-body._dist_m = Math.round(distM);
-body._fence_m = FENCE_M;
-body._acc_max = ACC_MAX;
-body._bypass_fence = bypassFence ? 1 : 0;
-
-      // 可選：附回 GAS 便於記錄（不影響原本邏輯）
-      body._dist_m = Math.round(distM);
-      body._fence_m = FENCE_M;
-      body._acc_max = ACC_MAX;
-    }
 
     // 通過圍籬才轉送 GAS
     const res = await fetch(GAS_WEBAPP_URL, {
@@ -103,6 +97,7 @@ function json(obj, status=200){
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store"
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "Content-Type",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
