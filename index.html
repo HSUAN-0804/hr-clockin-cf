@@ -696,144 +696,74 @@ async function refreshState(){
   };
 
   async function postClock(action){
-    if(punchInFlight){
-      setStatus('warn','處理中，請稍候…');
-      return;
-    }
-
-    const nowMs0 = Date.now();
-    if(nowMs0 - lastPunchAt < PUNCH_DEBOUNCE_MS){
-      setStatus('warn','你剛剛已送出打卡，請勿重複按～');
-      return;
-    }
- 
-
-    punchInFlight = true;
-    lastPunchAt = nowMs0;
-
-    try{
-      if(!profile) throw new Error('尚未登入');
-
-      const act = String(action||'').toUpperCase();
-      if(act !== 'IN' && act !== 'OUT') throw new Error('無效動作');
-
-      if(act==='IN' && currentState==='IN'){ setStatus('warn','你目前已在上班中（請先打下班卡 OUT）'); return; }
-      if(act==='OUT' && currentState!=='IN'){ setStatus('warn','你目前未上班/已下班（請先打上班卡 IN）'); return; }
-
-      setStatus('', '送出打卡中…');
-      btnIn.disabled = true;
-      btnOut.disabled = true;
-
-      let distFast = null;
-      let accFast = null;
-      if(lastPos){
-        distFast = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, lastPos.coords.latitude, lastPos.coords.longitude);
-        accFast = Number(lastPos.coords.accuracy || 0);
-      }
-      const ACC_THRESHOLD = Math.max(30, FENCE_M);
-      const inFastRange = (distFast != null) ? (Math.round(distFast) <= FENCE_M) : false;
-
-      if(!(inFastRange && accFast > 0 && accFast <= ACC_THRESHOLD)){
-        pillGps.textContent = '定位校準中…';
-        const posAcc = await getGpsAccurate();
-        if(posAcc) lastPos = posAcc;
-      }
-      if(!lastPos){
-        setStatus('bad','定位未取得，請允許定位後再打卡。');
-        showCloseBtn();
-        return;
-      }
-
-      const when = new Date();
-      const hhmm = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}`;
-      const dateStr = `${when.getFullYear()}-${String(when.getMonth()+1).padStart(2,'0')}-${String(when.getDate()).padStart(2,'0')}`;
-      const timeStr = `${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}:${String(when.getSeconds()).padStart(2,'0')}`;
-
-      let empName = localStorage.getItem('empDisplayName') || '';
-      if(!empName){
-        const n = await fetchEmpDisplayName_(250);
-        if(n){
-          empName = n;
-          localStorage.setItem('empDisplayName', n);
-        }
-      }
-      if(!empName) empName = '員工';
-
-      const payload = {
-        action: act,
-        userId: profile.userId,
-        lat: lastPos.coords.latitude,
-        lng: lastPos.coords.longitude,
-        accuracy: lastPos.coords.accuracy,
-        device: navigator.userAgent || '',
-        note: ''
-      };
-
-      let serverFlex = null;
-      try{
-        const controller = new AbortController();
-        const timer = setTimeout(()=>controller.abort(), 700);
-        const resp = await fetch('/api/clock', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(payload),
-          signal: controller.signal
-        });
-        clearTimeout(timer);
-        const data = await resp.json().catch(()=>null);
-        if (!data || data.ok !== true) {
-  alert(JSON.stringify(data, null, 2));
-}
-        if(data && data.ok && data.flex){
-          serverFlex = data.flex;
-        }else if(data && !data.ok){
-          setStatus('bad', data.message || '打卡失敗');
-          showCloseBtn();
-          return;
-        }
-      }catch(e){
-        // timeout → fallback
-      }
-
-      if(!serverFlex){
-        queueClockWrite_(payload);
-      }
-
-      const distM = (lastDistM != null) ? lastDistM : haversineMeters_(SHOP_LAT, SHOP_LNG, payload.lat, payload.lng);
-      const toSend = serverFlex ? serverFlex : buildLocalFlex_(act, empName, hhmm, dateStr, timeStr, distM);
-      const msg = normalizeFlexMessage_(toSend);
-
-      await liff.sendMessages([msg]);
-
-      if(act==='IN'){
-        currentState = 'IN';
-        setStateUI('IN');
-        writeStateCache_('IN');
-      }else{
-        currentState = 'OFF';
-        setStateUI('OFF');
-        writeStateCache_('OFF');
-      }
-
-      try{
-        liff.closeWindow();
-        return;
-      }catch(e){
-        setStatus('ok','Flex 已送出 ✅（若未自動關閉，請按「關閉視窗」）');
-        showCloseBtn();
-      }
-    }catch(err){
-      setStatus('warn', err && err.message ? err.message : '送出失敗');
-      showCloseBtn();
-    }finally{
-  punchInFlight = false;
-  // ✅ 依目前狀態重新套用按鈕可用性（避免被 finally 蓋掉）
-  setStateUI(currentState);
-}
+  if(!profile || !profile.userId){
+    alert("LINE 尚未登入");
+    return;
   }
 
-  btnIn.onclick = ()=>postClock('IN');
-  btnOut.onclick = ()=>postClock('OUT');
+  if(punchInFlight) return;
+  punchInFlight = true;
+
+  try{
+    setStatus('定位中…');
+
+    const pos = await getPosition();
+    if(!pos){
+      alert('無法取得定位，請允許定位權限');
+      return;
+    }
+
+    const { latitude, longitude, accuracy } = pos.coords;
+
+    const payload = {
+      action,
+      userId: profile.userId,
+      lat: latitude,
+      lng: longitude,
+      accuracy
+    };
+
+    setStatus('送出打卡…');
+
+    const resp = await fetch('/api/clock', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify(payload),
+      cache: 'no-store'
+    });
+
+    const data = await resp.json().catch(()=>null);
+
+    // ❗只在失敗時顯示 debug
+    if(!data || data.ok !== true){
+      alert(JSON.stringify(data, null, 2));
+      setStatus('打卡失敗');
+      return;
+    }
+
+    // 成功
+    if(action === 'IN'){
+      currentState = 'IN';
+      setStatus('已上班');
+    }else{
+      currentState = 'OFF';
+      setStatus('已下班');
+    }
+
+    writeStateCache_(currentState);
+    setStateUI(currentState);
+
+  }catch(err){
+    alert('系統錯誤: ' + err.message);
+    setStatus('系統錯誤');
+
+  }finally{
+    punchInFlight = false;
+
+    // 重新依照目前狀態套 UI
+    setStateUI(currentState);
+  }
+}
 
   async function init(){
     try{
