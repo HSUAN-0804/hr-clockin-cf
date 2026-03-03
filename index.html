@@ -762,7 +762,7 @@
         });
         clearTimeout(timer);
         const data = await resp.json().catch(()=>null);
-
+alert(JSON.stringify(data, null, 2));
         if(data && data.ok && data.flex){
           serverFlex = data.flex;
         }else if(data && !data.ok){
