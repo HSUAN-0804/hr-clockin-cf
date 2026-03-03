@@ -2,7 +2,17 @@
 const BYPASS = new Set([
   "U04731e6b1fcc42dc33e3141c55ad6ef5"
 ]);
-
+export async function onRequestOptions() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Cache-Control": "no-store",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+    },
+  });
+}
 export async function onRequestPost({ request, env }) {
   try {
     const GAS_WEBAPP_URL = (env.GAS_WEBAPP_URL || "").trim();
@@ -92,16 +102,16 @@ export async function onRequestOptions() {
   });
 }
 
-function json(obj, status=200){
+function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store"
+      "Cache-Control": "no-store",
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "Content-Type",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
-    }
+    },
   });
 }
 
