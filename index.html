@@ -90,16 +90,14 @@
       min-height:44px;
       padding:6px;
       display:flex;
-      flex-direction: column; /* ✅ 重要：日期 + 時段 垂直排列 */
+      flex-direction: column;
       align-items:flex-start;
       justify-content:flex-start;
       cursor:pointer;
     }
     .cal-cell.is-out{opacity:.35}
     .cal-cell.today{border-color:rgba(255,255,255,.35)}
-    .cal-day{font-weight:900;font-size:14px;color:#fff}
 
-    /* ✅ 上班/休假 indicator：只有上班日會顯示時段（休假留空） */
     .cal-cell.work{
       border-color: rgba(34,197,94,.35);
       background: rgba(34,197,94,.10);
@@ -107,6 +105,7 @@
     .cal-cell.off{
       opacity: .55;
     }
+    .cal-day{font-weight:900;font-size:14px;color:#fff}
     .cal-tag{
       margin-top: 4px;
       font-size: 11px;
@@ -205,7 +204,9 @@
   const LIFF_ID = "2008810311-jmqyUaTN";
   const SHOP_LAT = 24.9714585;
   const SHOP_LNG = 121.2242778;
-  const FENCE_M  = 100;
+
+  // ✅ 改成 500m
+  const FENCE_M  = 500;
 
   const el = (id)=>document.getElementById(id);
   const tabClock = el('tabClock'), tabSchedule = el('tabSchedule');
@@ -246,18 +247,18 @@
   const PUNCH_DEBOUNCE_MS = 60000; // 60s
 
   function showLoading(title='讀取中…', hint='請稍候'){
-  const m = document.getElementById('loadingModal');
-  if(!m) return;
-  document.getElementById('loadingTitle').textContent = title;
-  document.getElementById('loadingHint').textContent = hint;
-  m.style.display = 'flex';
-}
+    const m = document.getElementById('loadingModal');
+    if(!m) return;
+    document.getElementById('loadingTitle').textContent = title;
+    document.getElementById('loadingHint').textContent = hint;
+    m.style.display = 'flex';
+  }
 
-function hideLoading(){
-  const m = document.getElementById('loadingModal');
-  if(!m) return;
-  m.style.display = 'none';
-}
+  function hideLoading(){
+    const m = document.getElementById('loadingModal');
+    if(!m) return;
+    m.style.display = 'none';
+  }
 
   function setStatus(type, text){
     statusBox.className = 'status ' + (type || '');
@@ -352,7 +353,8 @@ function hideLoading(){
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ action:'STATUS', userId: profile.userId }),
-        signal: controller.signal
+        signal: controller.signal,
+        cache: 'no-store'
       });
       clearTimeout(timer);
       const data = await resp.json().catch(()=>null);
@@ -412,36 +414,35 @@ function hideLoading(){
   }
 
   let __refreshing = false;
+  async function refreshState(){
+    if(!profile || !profile.userId) return;
+    if(__refreshing) return;
+    __refreshing = true;
 
-async function refreshState(){
-  if(!profile || !profile.userId) return;
-  if(__refreshing) return;
-  __refreshing = true;
+    try{
+      const resp = await fetch('/api/clock', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'STATUS', userId: profile.userId }),
+        cache: 'no-store'
+      });
 
-  try{
-    const resp = await fetch('/api/clock', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ action:'STATUS', userId: profile.userId }),
-      cache: 'no-store'
-    });
+      const data = await resp.json().catch(()=>null);
 
-    const data = await resp.json().catch(()=>null);
+      // ✅ 只有成功拿到 state 才更新 UI；拿不到就保持目前畫面
+      if(data && data.ok && data.state){
+        setStateUI(data.state);
+        writeStateCache_(data.state);
+        return;
+      }
 
-    // ✅ 只有成功拿到 state 才更新 UI；拿不到就保持目前畫面
-    if(data && data.ok && data.state){
-      setStateUI(data.state);
-      writeStateCache_(data.state);
-      return;
+      console.warn('[STATUS] invalid, keep current UI', data);
+    }catch(e){
+      console.warn('[STATUS] failed, keep current UI', e);
+    }finally{
+      __refreshing = false;
     }
-
-    console.warn('[STATUS] invalid, keep current UI', data);
-  }catch(e){
-    console.warn('[STATUS] failed, keep current UI', e);
-  }finally{
-    __refreshing = false;
   }
-}
 
   function queueClockWrite_(payload){
     try{
@@ -609,22 +610,19 @@ async function refreshState(){
       let cls = 'cal-cell' + (!inMonth ? ' is-out' : '') + (isToday_(cellDate) ? ' today' : '');
       let tagHtml = '';
 
-      // ✅ 只顯示上班日（WORK+segments）的時段；OFF/沒資料就留空
       if(item){
         const type = String(item.type || '').toUpperCase();
         const segs = Array.isArray(item.segments) ? item.segments : [];
-
         if(type === 'WORK' && segs.length){
           cls += ' work';
-         const t = segs.map(s=>`${s.start}-${s.end}`).join('/');
-        tagHtml = `<div class="cal-tag work">●</div>`;
+          tagHtml = `<div class="cal-tag work">●</div>`;
         }else{
           cls += ' off';
-          tagHtml = ''; // 休假留空
+          tagHtml = '';
         }
       }else{
         cls += ' off';
-        tagHtml = ''; // 沒資料也留空（視覺更乾淨）
+        tagHtml = '';
       }
 
       cell.className = cls;
@@ -659,7 +657,8 @@ async function refreshState(){
       const resp = await fetch('/api/schedule', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ userId: profile.userId, month })
+        body: JSON.stringify({ userId: profile.userId, month }),
+        cache: 'no-store'
       });
       const data = await resp.json().catch(()=>null);
       if(!data || !data.ok){
@@ -731,6 +730,8 @@ async function refreshState(){
       if(act==='IN' && currentState==='IN'){ setStatus('warn','你目前已在上班中（請先打下班卡 OUT）'); return; }
       if(act==='OUT' && currentState!=='IN'){ setStatus('warn','你目前未上班/已下班（請先打上班卡 IN）'); return; }
 
+      showLoading('送出打卡中…','請稍候，不要關閉頁面');
+
       setStatus('', '送出打卡中…');
       btnIn.disabled = true;
       btnOut.disabled = true;
@@ -788,7 +789,8 @@ async function refreshState(){
           method:'POST',
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify(payload),
-          signal: controller.signal
+          signal: controller.signal,
+          cache:'no-store'
         });
         clearTimeout(timer);
         const data = await resp.json().catch(()=>null);
@@ -835,10 +837,10 @@ async function refreshState(){
       setStatus('warn', err && err.message ? err.message : '送出失敗');
       showCloseBtn();
     }finally{
-  punchInFlight = false;
-  // ✅ 依目前狀態重新套 UI（不要硬解鎖兩顆）
-  setStateUI(currentState);
-}
+      hideLoading();
+      punchInFlight = false;
+      setStateUI(currentState);
+    }
   }
 
   btnIn.onclick = ()=>postClock('IN');
@@ -848,6 +850,7 @@ async function refreshState(){
     showLoading('載入中…', '正在取得登入與狀態');
     try{
       await liff.init({ liffId: LIFF_ID });
+
       try{
         clientText.textContent = (liff.isInClient && liff.isInClient()) ? 'LINE內（可關閉）' : '非LINE內';
       }catch(e){ clientText.textContent='未知'; }
@@ -901,25 +904,27 @@ async function refreshState(){
     }catch(e){
       setStatus('bad','初始化失敗');
       showCloseBtn();
+    }finally{
+      hideLoading(); // ✅ 一定要在 init finally
     }
   }
-hideLoading();
+
   init();
-  <!-- ✅ Loading Modal -->
-<div id="loadingModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:9999">
-  <div style="background:#111827;color:#fff;padding:16px 18px;border-radius:14px;min-width:240px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.35)">
-    <div class="spinner" style="width:22px;height:22px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;animation:spin 0.8s linear infinite"></div>
-    <div>
-      <div id="loadingTitle" style="font-weight:700;font-size:14px;line-height:1.2">讀取中…</div>
-      <div id="loadingHint" style="opacity:.85;font-size:12px;margin-top:2px">請稍候</div>
+</script>
+
+  <!-- ✅ Loading Modal：一定要放在 script 外面 -->
+  <div id="loadingModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:9999">
+    <div style="background:#111827;color:#fff;padding:16px 18px;border-radius:14px;min-width:240px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.35)">
+      <div class="spinner" style="width:22px;height:22px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;animation:spin 0.8s linear infinite"></div>
+      <div>
+        <div id="loadingTitle" style="font-weight:700;font-size:14px;line-height:1.2">讀取中…</div>
+        <div id="loadingHint" style="opacity:.85;font-size:12px;margin-top:2px">請稍候</div>
+      </div>
     </div>
   </div>
-</div>
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 
-<style>
-@keyframes spin { to { transform: rotate(360deg); } }
-</style>
-  
-</script>
 </body>
 </html>
