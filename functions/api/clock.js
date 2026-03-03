@@ -42,9 +42,7 @@ if (distM > FENCE_M) {
   return json({
     ok:false,
     code:"OUT_OF_RANGE",
-    _layer:"CF",                 // ✅ 告訴你是 Cloudflare 擋的
-    _cf_ver:"FENCE_DEBUG_v1",     // ✅ 你自己可改版本字
-    message:`[CF] 超出打卡範圍：${Math.round(distM)}m / ${FENCE_M}m`,
+    message:`超出打卡範圍：${Math.round(distM)}m / ${FENCE_M}m（請靠近店面再打卡）`,
     dist_m: Math.round(distM),
     fence_m: FENCE_M
   }, 403);
