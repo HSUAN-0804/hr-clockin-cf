@@ -397,21 +397,39 @@
     }catch(e){}
   }
 
-  async function refreshState(){
-    if(!profile || !profile.userId) return;
-    try{
-      const resp = await fetch('/api/clock', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'STATUS', userId: profile.userId })
-      });
-      const data = await resp.json().catch(()=>null);
-      if(data && data.ok && data.state){ setStateUI(data.state); writeStateCache_(data.state); }
-      else setStateUI('OFF');
-    }catch(e){
-      setStateUI('OFF');
+  let __refreshing = false;
+
+async function refreshState(){
+  if(!profile || !profile.userId) return;
+  if(__refreshing) return;
+  __refreshing = true;
+
+  try{
+    const resp = await fetch('/api/clock', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'STATUS', userId: profile.userId }),
+      cache: 'no-store' // ✅ 避免吃到舊狀態
+    });
+
+    const data = await resp.json().catch(()=>null);
+
+    // ✅ 只有「真的拿到狀態」才更新 UI；拿不到就維持目前畫面（不要蓋回 OFF）
+    if(data && data.ok && data.state){
+      setStateUI(data.state);
+      writeStateCache_(data.state);
+      return;
     }
+
+    console.warn('[STATUS] invalid, keep current UI', data);
+    // 不做 setStateUI('OFF')
+  }catch(e){
+    console.warn('[STATUS] failed, keep current UI', e);
+    // 不做 setStateUI('OFF')
+  }finally{
+    __refreshing = false;
   }
+}
 
   function queueClockWrite_(payload){
     try{
