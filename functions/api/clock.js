@@ -91,16 +91,7 @@ export async function onRequestPost({ request, env }) {
   }
 }
 
-export async function onRequestOptions() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-    }
-  });
-}
+
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
