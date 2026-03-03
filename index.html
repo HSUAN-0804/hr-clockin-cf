@@ -706,10 +706,7 @@ async function refreshState(){
       setStatus('warn','你剛剛已送出打卡，請勿重複按～');
       return;
     }
-    // ✅ 只要不是 ok=true 就跳出完整回傳（包含 code/message）
-if (!data || data.ok !== true) {
-  alert(JSON.stringify(data, null, 2));
-}
+ 
 
     punchInFlight = true;
     lastPunchAt = nowMs0;
@@ -784,7 +781,9 @@ if (!data || data.ok !== true) {
         });
         clearTimeout(timer);
         const data = await resp.json().catch(()=>null);
-alert(JSON.stringify(data, null, 2));
+        if (!data || data.ok !== true) {
+  alert(JSON.stringify(data, null, 2));
+}
         if(data && data.ok && data.flex){
           serverFlex = data.flex;
         }else if(data && !data.ok){
@@ -827,10 +826,10 @@ alert(JSON.stringify(data, null, 2));
       setStatus('warn', err && err.message ? err.message : '送出失敗');
       showCloseBtn();
     }finally{
-      punchInFlight = false;
-      btnIn.disabled = false;
-      btnOut.disabled = false;
-    }
+  punchInFlight = false;
+  // ✅ 依目前狀態重新套用按鈕可用性（避免被 finally 蓋掉）
+  setStateUI(currentState);
+}
   }
 
   btnIn.onclick = ()=>postClock('IN');
