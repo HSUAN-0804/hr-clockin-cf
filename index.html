@@ -706,6 +706,10 @@ async function refreshState(){
       setStatus('warn','你剛剛已送出打卡，請勿重複按～');
       return;
     }
+    // ✅ 只要不是 ok=true 就跳出完整回傳（包含 code/message）
+if (!data || data.ok !== true) {
+  alert(JSON.stringify(data, null, 2));
+}
 
     punchInFlight = true;
     lastPunchAt = nowMs0;
