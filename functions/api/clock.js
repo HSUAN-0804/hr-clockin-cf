@@ -19,6 +19,19 @@ export async function onRequestPost({ request, env }) {
     const body = await request.json().catch(() => null);
     if (!body) return json({ ok:false, code:"BAD_JSON", message:"請求格式錯誤" }, 400);
 
+    const allow = parseAllowlist_(env);
+const clientIp = getClientIp_(request);
+
+// ✅ 硬擋：只有店內 Wi-Fi 的 Public IP 才能 IN/OUT
+if ((action === "IN" || action === "OUT") && allow.size > 0 && !allow.has(clientIp)) {
+  return json({
+    ok: false,
+    code: "NOT_IN_STORE_WIFI",
+    message: "請連上店內 Wi-Fi 才能打卡",
+    ip: clientIp
+  }, 403);
+}
+
     const action = String(body.action || "").trim().toUpperCase();
     const needFence = (action === "IN" || action === "OUT");
 
