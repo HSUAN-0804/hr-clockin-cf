@@ -19,11 +19,14 @@ export async function onRequestPost({ request, env }) {
     const body = await request.json().catch(() => null);
     if (!body) return json({ ok:false, code:"BAD_JSON", message:"請求格式錯誤" }, 400);
 
-    const allow = parseAllowlist_(env);
+    const action = String(body.action || "").trim().toUpperCase();
+const needFence = (action === "IN" || action === "OUT");
+
+const allow = parseAllowlist_(env);
 const clientIp = getClientIp_(request);
 
 // ✅ 硬擋：只有店內 Wi-Fi 的 Public IP 才能 IN/OUT
-if ((action === "IN" || action === "OUT") && allow.size > 0 && !allow.has(clientIp)) {
+if (needFence && allow.size > 0 && !allow.has(clientIp)) {
   return json({
     ok: false,
     code: "NOT_IN_STORE_WIFI",
@@ -31,10 +34,6 @@ if ((action === "IN" || action === "OUT") && allow.size > 0 && !allow.has(client
     ip: clientIp
   }, 403);
 }
-
-    const action = String(body.action || "").trim().toUpperCase();
-    const needFence = (action === "IN" || action === "OUT");
-
     // 店家座標：可用 env 覆蓋（不想動程式就改環境變數）
     const SHOP_LAT = toNum(env.SHOP_LAT, 24.9714585);
     const SHOP_LNG = toNum(env.SHOP_LNG, 121.2242778);
