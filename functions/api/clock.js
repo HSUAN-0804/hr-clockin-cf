@@ -1,3 +1,16 @@
+function getClientIp_(request){
+  return (
+    request.headers.get('CF-Connecting-IP') ||
+    request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ||
+    ''
+  ).trim();
+}
+
+function parseAllowlist_(env){
+  const raw = String(env.STORE_IP_ALLOWLIST || '').trim();
+  if(!raw) return new Set();
+  return new Set(raw.split(/[\s,]+/).map(s=>s.trim()).filter(Boolean));
+}
 export async function onRequestPost({ request, env }) {
   try {
     const GAS_WEBAPP_URL = (env.GAS_WEBAPP_URL || "").trim();
